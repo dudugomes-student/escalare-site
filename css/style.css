@@ -1,0 +1,717 @@
+/* ==========================================================================
+   Escalare Gestão Empresarial - Folha de Estilos Oficial
+   ========================================================================== */
+
+/* 1. Reset CSS & Box Model */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  color: #17252B;
+  background-color: #FFFFFF;
+  line-height: 1.6;
+}
+
+/* 2. Design Tokens (Variáveis Globais) */
+:root {
+  --color-brand-deep: #071B2C;
+  --color-brand-secondary: #0B2638;
+  --color-brand-accent: #18B7A0;
+  --color-brand-accent-light: #48D6C2;
+  --color-surface-light: #F5F7F6;
+  --color-surface-pure: #FFFFFF;
+  --color-text-primary: #17252B;
+  --color-text-secondary: #66747A;
+  --color-text-muted: #A1B2BA;
+  --color-border-dark: #16364D;
+  --color-border-light: #E1E6E8;
+  --radius-subtle: 4px;
+  --radius-card: 8px;
+  --container-width: 1200px;
+}
+
+/* 3. Layout Base & Container */
+.container {
+  width: 100%;
+  max-width: var(--container-width);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+/* 4. Tipografia Estrutural */
+h1, h2, h3, h4 {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  color: inherit;
+  line-height: 1.2;
+}
+
+/* 5. Header & Navegação */
+.site-header {
+  background-color: var(--color-brand-deep);
+  border-bottom: 1px solid var(--color-border-dark);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  transition: background-color 0.2s ease;
+}
+
+.header-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 80px;
+  position: relative;
+}
+
+.brand-logo {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.brand-logo-img {
+  display: block;
+  height: 42px;
+  width: auto;
+  object-fit: contain;
+}
+
+.nav-list {
+  display: flex;
+  gap: 2rem;
+  list-style: none;
+  align-items: center;
+}
+
+.nav-link {
+  color: #C2CDD1;
+  text-decoration: none;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.nav-link:hover,
+.nav-link[aria-current="page"] {
+  color: var(--color-brand-accent-light);
+  font-weight: 600;
+}
+
+/* 6. Botões */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius-subtle);
+  text-decoration: none;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.1s ease;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn-primary {
+  background-color: var(--color-brand-accent);
+  color: var(--color-brand-deep);
+  border-color: var(--color-brand-accent);
+}
+
+.btn-primary:hover {
+  background-color: var(--color-brand-accent-light);
+  border-color: var(--color-brand-accent-light);
+  color: var(--color-brand-deep);
+}
+
+.btn-secondary {
+  background-color: transparent;
+  color: #FFFFFF;
+  border-color: var(--color-border-dark);
+}
+
+.btn-secondary:hover {
+  border-color: var(--color-brand-accent);
+  color: var(--color-brand-accent-light);
+}
+
+.btn-large {
+  padding: 1rem 2rem;
+  font-size: 1rem;
+}
+
+/* 7. Hero Section */
+.section-hero {
+  background-color: var(--color-brand-deep);
+  color: #FFFFFF;
+  padding: 5rem 0;
+  border-bottom: 1px solid var(--color-border-dark);
+}
+
+.hero-layout {
+  display: grid;
+  grid-template-columns: 1.3fr 0.7fr;
+  gap: 4rem;
+  align-items: center;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-subtle);
+  background-color: rgba(24, 183, 160, 0.08);
+  border: 1px solid rgba(24, 183, 160, 0.25);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--color-brand-accent-light);
+  margin-bottom: 1.5rem;
+}
+
+.badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--color-brand-accent);
+}
+
+.hero-title {
+  font-size: clamp(2.25rem, 4vw, 3.25rem);
+  font-weight: 800;
+  line-height: 1.15;
+  margin-bottom: 1.5rem;
+  letter-spacing: -0.02em;
+}
+
+.hero-description {
+  font-size: 1.125rem;
+  color: var(--color-text-muted);
+  line-height: 1.6;
+  margin-bottom: 2.5rem;
+  max-width: 90%;
+}
+
+.hero-cta-group {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* 8. Painel de Métricas do Hero */
+.panel-card-wrapper {
+  background-color: var(--color-brand-secondary);
+  border: 1px solid var(--color-border-dark);
+  border-radius: var(--radius-card);
+  padding: 2.5rem;
+}
+
+.card-header-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  margin-bottom: 2rem;
+  font-weight: 500;
+}
+
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--color-brand-accent);
+}
+
+.metric-block {
+  margin: 1.25rem 0;
+}
+
+.metric-value {
+  display: block;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 2.75rem;
+  font-weight: 800;
+  color: #FFFFFF;
+  line-height: 1;
+  margin-bottom: 0.35rem;
+}
+
+.metric-label {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.divider-subtle {
+  border: none;
+  border-top: 1px solid var(--color-border-dark);
+}
+
+/* 9. Seções Gerais */
+.section-padded {
+  padding: 6rem 0;
+}
+
+.bg-surface-light {
+  background-color: var(--color-surface-light);
+}
+
+.section-header-centered {
+  text-align: center;
+  max-width: 760px;
+  margin: 0 auto 4rem auto;
+}
+
+.category-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--color-brand-accent);
+  margin-bottom: 0.75rem;
+  display: block;
+}
+
+.section-title {
+  font-size: clamp(1.85rem, 3vw, 2.5rem);
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-bottom: 1rem;
+}
+
+.section-subtitle {
+  font-size: 1.0625rem;
+  color: var(--color-text-secondary);
+}
+
+/* 10. Grade de Cards */
+.grid-columns-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+}
+
+.card-feature {
+  background: var(--color-surface-pure);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-card);
+  padding: 2.5rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-feature:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(7, 27, 44, 0.05);
+}
+
+.card-numeral {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--color-brand-accent);
+  margin-bottom: 1.5rem;
+}
+
+.card-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-bottom: 0.75rem;
+}
+
+.card-text {
+  font-size: 0.9375rem;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+/* 11. Rodapé Institucional */
+.site-footer {
+  background-color: var(--color-brand-deep);
+  color: var(--color-text-muted);
+  padding: 5rem 0 2rem 0;
+  border-top: 1px solid var(--color-border-dark);
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1.5fr;
+  gap: 4rem;
+  margin-bottom: 4rem;
+}
+
+.footer-brand-link {
+  display: inline-block;
+  text-decoration: none;
+}
+
+.footer-logo-img {
+  display: block;
+  height: 38px;
+  width: auto;
+  object-fit: contain;
+}
+
+.footer-bio {
+  font-size: 0.875rem;
+  margin-top: 1rem;
+  margin-bottom: 1.25rem;
+  max-width: 320px;
+}
+
+.legal-data {
+  font-size: 0.75rem;
+  color: #66747A;
+}
+
+.footer-heading {
+  color: #FFFFFF;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  margin-bottom: 1.25rem;
+}
+
+.footer-col-links ul {
+  list-style: none;
+}
+
+.footer-col-links li {
+  margin-bottom: 0.75rem;
+}
+
+.footer-col-links a {
+  color: var(--color-text-muted);
+  text-decoration: none;
+  font-size: 0.875rem;
+  transition: color 0.2s ease;
+}
+
+.footer-col-links a:hover {
+  color: var(--color-brand-accent-light);
+}
+
+.footer-contact-item {
+  font-size: 0.875rem;
+  display: block;
+}
+
+.footer-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--color-border-dark);
+  padding-top: 2rem;
+  font-size: 0.75rem;
+}
+
+.footer-link-subtle {
+  color: #66747A;
+  text-decoration: none;
+}
+
+.footer-link-subtle:hover {
+  color: var(--color-text-muted);
+}
+
+/* 12. Formulários Padronizados & Feedback */
+.form-card-wrapper {
+  background-color: var(--color-surface-pure);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-card);
+  padding: 2.5rem;
+  box-shadow: 0 4px 20px rgba(7, 27, 44, 0.04);
+}
+
+.form-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.form-grid-2-1 {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 0.4rem;
+}
+
+.form-control,
+.form-select,
+.form-textarea {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-subtle);
+  font-family: inherit;
+  font-size: 0.9375rem;
+  color: var(--color-text-primary);
+  background-color: #FFFFFF;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-control:focus,
+.form-select:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: var(--color-brand-accent);
+  box-shadow: 0 0 0 3px rgba(24, 183, 160, 0.18);
+}
+
+.form-control::placeholder,
+.form-textarea::placeholder {
+  color: var(--color-text-muted);
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 110px;
+}
+
+.form-disclaimer {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+/* Feedback de Sucesso do Formulário */
+.form-success-box {
+  background-color: var(--color-surface-pure);
+  border: 1px solid rgba(24, 183, 160, 0.3);
+  border-radius: var(--radius-card);
+  padding: 2.5rem;
+  text-align: center;
+  animation: fadeIn 0.3s ease;
+}
+
+.success-icon {
+  width: 54px;
+  height: 54px;
+  background-color: rgba(24, 183, 160, 0.12);
+  color: var(--color-brand-accent);
+  border: 2px solid var(--color-brand-accent);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 auto 1.25rem auto;
+}
+
+.success-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-bottom: 0.75rem;
+}
+
+.success-message {
+  font-size: 0.9375rem;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  margin-bottom: 2rem;
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.success-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 360px;
+  margin: 0 auto;
+}
+
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(7, 27, 44, 0.25);
+  border-radius: 50%;
+  border-top-color: var(--color-brand-deep);
+  animation: spin 0.6s linear infinite;
+  margin-right: 0.5rem;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 13. Acessibilidade - Focus Visible */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--color-brand-accent);
+  outline-offset: 2px;
+}
+
+.mobile-toggle {
+  display: none;
+}
+
+/* ==========================================================================
+   14. Responsividade Mobile-First (< 900px)
+   ========================================================================== */
+@media (max-width: 900px) {
+  .hero-layout {
+    grid-template-columns: 1fr;
+    gap: 3rem;
+  }
+  
+  .grid-columns-3 {
+    grid-template-columns: 1fr;
+  }
+  
+  .footer-grid {
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+  }
+
+  .footer-bottom {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+
+  .form-grid-2,
+  .form-grid-2-1 {
+    grid-template-columns: 1fr;
+  }
+
+  .site-header {
+    position: sticky;
+    top: 0;
+  }
+
+  .mobile-toggle {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 42px;
+    height: 42px;
+    gap: 6px;
+    background: transparent;
+    border: 1px solid var(--color-border-dark);
+    border-radius: var(--radius-subtle);
+    cursor: pointer;
+    padding: 0;
+    transition: border-color 0.2s ease;
+  }
+
+  .mobile-toggle:hover {
+    border-color: var(--color-brand-accent);
+  }
+
+  .mobile-toggle .bar {
+    width: 20px;
+    height: 2px;
+    background-color: #FFFFFF;
+    transition: transform 0.25s ease, opacity 0.25s ease;
+    transform-origin: center;
+  }
+
+  /* Animação do botão hambúrguer para X */
+  .site-header.nav-open .mobile-toggle .bar:nth-child(1) {
+    transform: translateY(4px) rotate(45deg);
+  }
+
+  .site-header.nav-open .mobile-toggle .bar:nth-child(2) {
+    transform: translateY(-4px) rotate(-45deg);
+  }
+
+  /* Menu Drawer Mobile */
+  .main-nav {
+    display: none;
+    position: absolute;
+    top: 80px;
+    left: 0;
+    right: 0;
+    background-color: var(--color-brand-deep);
+    border-bottom: 1px solid var(--color-border-dark);
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.4);
+    padding: 1.5rem 1.5rem 2rem 1.5rem;
+  }
+
+  .site-header.nav-open .main-nav {
+    display: block;
+    animation: slideDown 0.25s ease;
+  }
+
+  .nav-list {
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: stretch;
+  }
+
+  .nav-link {
+    display: block;
+    font-size: 1.0625rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid rgba(225, 230, 232, 0.08);
+  }
+
+  .header-actions {
+    display: none;
+  }
+
+  body.menu-open {
+    overflow: hidden;
+  }
+
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
