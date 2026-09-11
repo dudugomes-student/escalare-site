@@ -1,17 +1,108 @@
-/**
- * Escalare Gestão Empresarial - Script Principal
- * Funcionalidades: Menu responsivo mobile, máscaras de inputs, validação e envio interativo de formulários.
- */
-
 document.addEventListener('DOMContentLoaded', () => {
   initMobileMenu();
   initInputMasks();
   initFormValidation();
+  initScrollHeader();
+  initScrollReveal();
+  initCounters();
+  initAccordions();
+  initScrollProgress();
+  initBackToTop();
 });
 
-/**
- * 1. Menu Responsivo Mobile
- */
+function initScrollHeader() {
+  const header = document.getElementById('siteHeader');
+  if (!header) return;
+
+  window.addEventListener('scroll', () => {
+    if (window.scrollY > 20) {
+      header.classList.add('scrolled');
+    } else {
+      header.classList.remove('scrolled');
+    }
+  }, { passive: true });
+}
+
+function initScrollReveal() {
+  const reveals = document.querySelectorAll('.reveal');
+  if (!reveals.length) return;
+
+  if ('IntersectionObserver' in window) {
+    const observer = new IntersectionObserver((entries, obs) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('revealed');
+          obs.unobserve(entry.target);
+        }
+      });
+    }, {
+      root: null,
+      threshold: 0.15,
+      rootMargin: '0px 0px -40px 0px'
+    });
+
+    reveals.forEach(el => observer.observe(el));
+  } else {
+    reveals.forEach(el => el.classList.add('revealed'));
+  }
+}
+
+function initCounters() {
+  const counters = document.querySelectorAll('[data-counter]');
+  if (!counters.length) return;
+
+  if ('IntersectionObserver' in window) {
+    const observer = new IntersectionObserver((entries, obs) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const el = entry.target;
+          const target = parseFloat(el.getAttribute('data-counter'));
+          const suffix = el.getAttribute('data-suffix') || '';
+          const decimals = parseInt(el.getAttribute('data-decimals') || '0', 10);
+          const duration = 1600;
+          const startTime = performance.now();
+
+          const updateNumber = (currentTime) => {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const easeOutProgress = 1 - Math.pow(1 - progress, 3);
+            const currentVal = (target * easeOutProgress).toFixed(decimals);
+            
+            el.textContent = `${currentVal}${suffix}`;
+
+            if (progress < 1) {
+              requestAnimationFrame(updateNumber);
+            } else {
+              el.textContent = `${target.toFixed(decimals)}${suffix}`;
+            }
+          };
+
+          requestAnimationFrame(updateNumber);
+          obs.unobserve(el);
+        }
+      });
+    }, { threshold: 0.3 });
+
+    counters.forEach(c => observer.observe(c));
+  }
+}
+
+function initAccordions() {
+  const items = document.querySelectorAll('.accordion-item');
+  items.forEach(item => {
+    const header = item.querySelector('.accordion-header');
+    if (!header) return;
+
+    header.addEventListener('click', () => {
+      const isActive = item.classList.contains('active');
+      items.forEach(other => other.classList.remove('active'));
+      if (!isActive) {
+        item.classList.add('active');
+      }
+    });
+  });
+}
+
 function initMobileMenu() {
   const header = document.getElementById('siteHeader');
   const toggleBtn = document.querySelector('.mobile-toggle');
@@ -32,7 +123,6 @@ function initMobileMenu() {
     toggleMenu();
   });
 
-  // Fechar ao clicar em qualquer link de navegação
   if (nav) {
     nav.querySelectorAll('a').forEach(link => {
       link.addEventListener('click', () => {
@@ -41,14 +131,12 @@ function initMobileMenu() {
     });
   }
 
-  // Fechar ao clicar fora do cabeçalho
   document.addEventListener('click', (e) => {
     if (header.classList.contains('nav-open') && !header.contains(e.target)) {
       toggleMenu(true);
     }
   });
 
-  // Fechar com a tecla ESC
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && header.classList.contains('nav-open')) {
       toggleMenu(true);
@@ -57,11 +145,7 @@ function initMobileMenu() {
   });
 }
 
-/**
- * 2. Máscaras de Entrada para Telefones e Campos Específicos
- */
 function initInputMasks() {
-  // Máscara de Telefone/WhatsApp brasileiro (10 ou 11 dígitos)
   const phoneInputs = document.querySelectorAll('input[type="tel"], input[name*="phone"], input[name*="whatsapp"], input[name*="tel"]');
   
   phoneInputs.forEach(input => {
@@ -70,10 +154,8 @@ function initInputMasks() {
       if (value.length > 11) value = value.slice(0, 11);
 
       if (value.length > 10) {
-        // Formato (XX) XXXXX-XXXX
         e.target.value = value.replace(/^(\d{2})(\d{5})(\d{4})$/, '($1) $2-$3');
       } else if (value.length > 6) {
-        // Formato (XX) XXXX-XXXX (parcial)
         e.target.value = value.replace(/^(\d{2})(\d{4})(\d{0,4})$/, '($1) $2-$3');
       } else if (value.length > 2) {
         e.target.value = value.replace(/^(\d{2})(\d{0,5})$/, '($1) $2');
@@ -83,7 +165,6 @@ function initInputMasks() {
     });
   });
 
-  // CRM: Apenas dígitos ou caracteres de registro
   const crmInputs = document.querySelectorAll('input[name*="crm_number"]');
   crmInputs.forEach(input => {
     input.addEventListener('input', (e) => {
@@ -92,18 +173,14 @@ function initInputMasks() {
   });
 }
 
-/**
- * 3. Validação e Feedback Interativo dos Formulários
- */
 function initFormValidation() {
   const forms = document.querySelectorAll('form[data-validate="true"]');
-  const whatsappNumber = '5511994963872';
+  const whatsappNumber = '5511991243655';
 
   forms.forEach(form => {
     form.addEventListener('submit', (e) => {
       e.preventDefault();
 
-      // Checagem de campos obrigatórios nativos
       if (!form.checkValidity()) {
         form.reportValidity();
         return;
@@ -114,20 +191,18 @@ function initFormValidation() {
 
       if (submitBtn) {
         submitBtn.disabled = true;
-        submitBtn.innerHTML = 'Processando solicitação...';
+        submitBtn.innerHTML = '<span class="spinner"></span> Processando solicitação...';
       }
 
-      // Coletar dados do formulário
       const formData = new FormData(form);
       const dataObj = {};
       formData.forEach((value, key) => {
         dataObj[key] = value;
       });
 
-      // Montar mensagem para WhatsApp de apoio
-      let summaryText = 'Olá, gostaria de falar com a Escalare:';
+      let summaryText = 'Olá! Gostaria de solicitar um serviço da Escalare Gestão Empresarial.';
       if (dataObj.institution_name) {
-        summaryText = `*Solicitação para Clínicas - Escalare*\n\n` +
+        summaryText = `Olá! Gostaria de solicitar um serviço da Escalare Gestão Empresarial para clínicas:\n\n` +
           `• *Clínica:* ${dataObj.institution_name}\n` +
           `• *Responsável:* ${dataObj.contact_name}\n` +
           `• *E-mail:* ${dataObj.corporate_email}\n` +
@@ -135,7 +210,7 @@ function initFormValidation() {
           `• *Áreas / Demandas:* ${dataObj.sectors_needed}\n` +
           (dataObj.notes ? `• *Obs:* ${dataObj.notes}` : '');
       } else if (dataObj.doctor_name) {
-        summaryText = `*Credenciamento Médico - Escalare*\n\n` +
+        summaryText = `Olá! Gostaria de solicitar o credenciamento médico na Escalare Gestão Empresarial:\n\n` +
           `• *Médico:* ${dataObj.doctor_name}\n` +
           `• *CRM:* ${dataObj.crm_number}/${dataObj.crm_uf || ''}\n` +
           `• *Especialidade:* ${dataObj.specialty}\n` +
@@ -144,7 +219,7 @@ function initFormValidation() {
           `• *WhatsApp:* ${dataObj.doctor_whatsapp}\n` +
           `• *Disponibilidade:* ${dataObj.shifts_pref || 'Geral'}`;
       } else if (dataObj.contact_fullname) {
-        summaryText = `*Contato Institucional - Escalare*\n\n` +
+        summaryText = `Olá! Gostaria de solicitar um atendimento/serviço da Escalare Gestão Empresarial:\n\n` +
           `• *Nome:* ${dataObj.contact_fullname}\n` +
           `• *E-mail:* ${dataObj.contact_email}\n` +
           `• *Telefone:* ${dataObj.contact_tel}\n` +
@@ -155,7 +230,6 @@ function initFormValidation() {
       const encodedMsg = encodeURIComponent(summaryText);
       const whatsappUrl = `https://api.whatsapp.com/send?phone=${whatsappNumber}&text=${encodedMsg}`;
 
-      // Simulação de processamento com feedback amigável
       setTimeout(() => {
         const feedbackContainer = document.createElement('div');
         feedbackContainer.className = 'form-success-box';
@@ -191,6 +265,41 @@ function initFormValidation() {
           });
         }
       }, 700);
+    });
+  });
+}
+
+function initScrollProgress() {
+  const bar = document.querySelector('.reading-progress-bar');
+  if (!bar) return;
+
+  window.addEventListener('scroll', () => {
+    const scrollTop = window.scrollY || document.documentElement.scrollTop;
+    const docHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+    if (docHeight > 0) {
+      const scrollPercent = (scrollTop / docHeight) * 100;
+      bar.style.width = `${scrollPercent}%`;
+    }
+  }, { passive: true });
+}
+
+function initBackToTop() {
+  const btn = document.querySelector('.back-to-top');
+  if (!btn) return;
+
+  window.addEventListener('scroll', () => {
+    if (window.scrollY > 300) {
+      btn.classList.add('visible');
+    } else {
+      btn.classList.remove('visible');
+    }
+  }, { passive: true });
+
+  btn.addEventListener('click', (e) => {
+    e.preventDefault();
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
     });
   });
 }
