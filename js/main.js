@@ -175,7 +175,7 @@ function initInputMasks() {
 
 function initFormValidation() {
   const forms = document.querySelectorAll('form[data-validate="true"]');
-  const whatsappNumber = '5511991243655';
+  const whatsappNumber = '5511978116482';
 
   forms.forEach(form => {
     form.addEventListener('submit', (e) => {
@@ -228,7 +228,7 @@ function initFormValidation() {
       }
 
       const encodedMsg = encodeURIComponent(summaryText);
-      const whatsappUrl = `https://api.whatsapp.com/send?phone=${whatsappNumber}&text=${encodedMsg}`;
+      const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMsg}`;
 
       setTimeout(() => {
         const feedbackContainer = document.createElement('div');
