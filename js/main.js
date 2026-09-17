@@ -37,4 +37,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const backToTop = document.querySelector('.back-to-top');
   backToTop?.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+
+  const contactForm = document.querySelector('#contactForm');
+  contactForm?.addEventListener('submit', event => {
+    event.preventDefault();
+    const formData = new FormData(contactForm);
+    const name = String(formData.get('name') || '').trim();
+    const email = String(formData.get('email') || '').trim();
+    const phone = String(formData.get('phone') || '').trim();
+    const message = String(formData.get('message') || '').trim();
+    const whatsappMessage = [
+      'Olá! Gostaria de falar com a Escalare.',
+      '',
+      `Nome: ${name}`,
+      `E-mail: ${email}`,
+      `Telefone: ${phone}`,
+      message ? `Mensagem: ${message}` : ''
+    ].filter(Boolean).join('\n');
+    window.open(`https://wa.me/5511978116482?text=${encodeURIComponent(whatsappMessage)}`, '_blank', 'noopener,noreferrer');
+  });
 });
