@@ -977,6 +977,15 @@ h1, h2, h3, h4 {
   transform: translateX(0);
 }
 
+.whatsapp-floating:focus,
+.whatsapp-floating:focus-visible {
+  outline: none;
+}
+
+.whatsapp-floating:focus-visible .whatsapp-bubble {
+  box-shadow: 0 0 0 4px rgba(24, 183, 160, 0.3), 0 8px 24px rgba(37, 211, 102, 0.4);
+}
+
 /* 15. Animações Scroll Reveal */
 .js .reveal {
   opacity: 0;
