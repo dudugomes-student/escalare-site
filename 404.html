@@ -1,12 +1,25 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Página não encontrada | Escalare</title>
-<style>*{box-sizing:border-box}body{margin:0;background:#071b2c;color:#edf4ef;font-family:system-ui,sans-serif;min-height:100svh;display:grid;place-items:center;padding:32px}main{max-width:720px}small{font-size:11px;letter-spacing:.17em;color:#83c9b5}h1{font-size:clamp(40px,7vw,76px);font-weight:400;letter-spacing:-.05em;line-height:1.1}p{max-width:480px;color:#b7cacb;line-height:1.8}a,button{display:inline-block;color:#071b2c;background:#d9ece0;padding:15px 22px;margin-top:25px;font-size:14px;text-decoration:none;border:0;border-radius:3px;cursor:pointer}a:focus-visible,button:focus-visible{outline:3px solid #80d7bc;outline-offset:5px}</style></head>
-<body><main><small>ESCALARE / 404</small><h1>Vamos encontrar<br>o caminho certo.</h1><p>Esta página não foi encontrada. Volte ao início para explorar a atuação da Escalare.</p><a id="home-link" href="https://escalaregestaoempresarial.com/">Ir para o início ↗</a></main>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Página não encontrada | Escalare</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#071b2c;color:#edf4ef;font-family:system-ui,sans-serif;min-height:100svh;padding:clamp(24px,5vw,72px);display:grid;place-items:center}.not-found{width:min(1180px,100%);display:grid;grid-template-columns:minmax(0,.85fr) minmax(360px,1.15fr);align-items:center;gap:clamp(48px,9vw,140px)}small{font-size:10px;letter-spacing:.17em;color:#83c9b5}h1{max-width:680px;margin:28px 0;font-size:clamp(44px,6.5vw,84px);font-weight:400;letter-spacing:-.055em;line-height:1.03}p{max-width:490px;color:#b7cacb;line-height:1.8}a{display:inline-flex;align-items:center;justify-content:space-between;gap:36px;min-height:52px;color:#071b2c;background:#d9ece0;padding:14px 22px;margin-top:25px;font-size:14px;text-decoration:none;border-radius:3px}a:focus-visible{outline:3px solid #80d7bc;outline-offset:5px}.lost-grid{position:relative;aspect-ratio:1.15;border:1px solid #34505b;background:linear-gradient(90deg,transparent calc(100% - 1px),#29434e calc(100% - 1px)) 0 0/33.333% 100%,linear-gradient(transparent calc(100% - 1px),#29434e calc(100% - 1px)) 0 0/100% 33.333%}.lost-cell{position:absolute;top:34%;left:34%;width:31%;height:31%;border:1px solid #75c7b2;background:#0b2b39}.lost-cell::after{position:absolute;right:-52%;bottom:-52%;width:100%;height:100%;border:1px solid #75c7b2;background:#d9ece0;content:'';animation:cell-out 2.8s cubic-bezier(.22,1,.36,1) infinite alternate}.lost-label{position:absolute;right:4%;bottom:5%;font-size:9px;letter-spacing:.14em;color:#83c9b5}@keyframes cell-out{from{transform:translate(-18%,-18%)}to{transform:translate(8%,8%)}}@media(max-width:760px){body{place-items:start center}.not-found{grid-template-columns:1fr}.lost-grid{width:min(100%,430px)}.lost-cell::after{right:-35%;bottom:-35%}}@media(prefers-reduced-motion:reduce){.lost-cell::after{animation:none;transform:translate(8%,8%)}}
+</style>
+</head>
+<body>
+<main class="not-found">
+  <div><small>ESCALARE / 404</small><h1>Uma célula<br>fora da grade.</h1><p>Esta página não foi encontrada. Volte ao início para explorar a atuação da Escalare.</p><a id="home-link" href="https://escalaregestaoempresarial.com/">Ir para o início <span aria-hidden="true">↗</span></a></div>
+  <div class="lost-grid" aria-hidden="true"><span class="lost-cell"></span><span class="lost-label">POSIÇÃO SEM CONTEXTO</span></div>
+</main>
 <script>
 // GitHub Pages project sites live under /repository/. Custom domains live at root.
 const segments = location.pathname.split('/').filter(Boolean);
 const projectHost = location.hostname.endsWith('.github.io');
 const preview = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
 document.getElementById('home-link').href = projectHost || (preview && segments[0] === 'escalare-site') ? '/' + segments[0] + '/index.html' : '/index.html';
-</script></body></html>
+</script>
+</body>
+</html>

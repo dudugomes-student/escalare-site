@@ -66,6 +66,11 @@
             <div class="operation-figure-heading" aria-hidden="true"><span>ANATOMIA DE UMA OPERAÇÃO</span><span class="operation-view-label">VISTA CONCEITUAL</span></div>
             <div class="operation-render" data-operation-render>
               <img class="operation-fallback" src="assets/operation-unit.svg" width="800" height="680" fetchpriority="high" alt="Maquete conceitual de uma unidade de saúde: setores conectados a profissionais que se organizam em uma grade de escala médica.">
+              <div class="operation-handoff-grid" aria-hidden="true">
+                <span></span><span></span><span></span><span></span>
+                <span></span><span></span><span></span><span></span>
+                <span></span><span></span><span></span><span></span>
+              </div>
             </div>
             <div class="operation-scale-key" aria-hidden="true"><span>SETORES</span><span>PERÍODOS →</span><span>ALOCAÇÕES</span></div>
             <div class="operation-annotation" aria-hidden="true"><span class="operation-annotation-line"></span><span data-operation-label>Unidade de saúde</span></div>
@@ -89,30 +94,105 @@
       </div>
     </section>
 
-    <div class="operation-bridge grid-bridge" id="conteudo-home" tabindex="-1">
-      <div><span class="operation-eyebrow">DA OPERAÇÃO À ESCALA</span><p>Cada profissional no seu contexto.<br><strong>Cada escala a serviço do cuidado.</strong></p></div>
-      <a href="solucoes.html">Conheça nossa atuação <span aria-hidden="true">↗</span></a>
-    </div>
+    <section class="scale-story solution-feature" id="conteudo-home" tabindex="-1" data-scale-story data-stage="4" aria-labelledby="scale-title">
+      <div class="scale-stage">
+        <header class="scale-heading">
+          <span>01 / 02</span>
+          <p>Da mesma matéria: a arquitetura se torna relação.</p>
+          <span>REPRESENTAÇÃO CONCEITUAL</span>
+        </header>
+        <div class="scale-layout">
+          <div class="scale-copy">
+            <span class="kicker">02 — ESCALA VIVA</span>
+            <h2 id="scale-title">Uma escala não é<br>somente <em>uma grade.</em></h2>
+            <p class="scale-active-copy" data-scale-copy>Setor, período e profissional formam um contexto.</p>
+            <a class="text-link" href="solucoes.html">Explorar a gestão de escalas <span aria-hidden="true">↗</span></a>
+          </div>
 
+          <figure class="living-scale" aria-labelledby="living-scale-caption">
+            <div class="living-scale-top" aria-hidden="true"><span>VISÃO DA OPERAÇÃO</span><span>ESCALA / CONCEITO</span></div>
+            <div class="living-scale-board" aria-hidden="true">
+              <div class="living-grid">
+                <span class="grid-corner">SETOR</span><span class="grid-period">PERÍODO 01</span><span class="grid-period">PERÍODO 02</span><span class="grid-period">PERÍODO 03</span><span class="grid-period">PERÍODO 04</span>
+                <span class="grid-sector">01</span><i class="scale-cell" data-row="1" data-period="1"></i><i class="scale-cell is-assigned" data-row="1" data-period="2"><b></b></i><i class="scale-cell" data-row="1" data-period="3"></i><i class="scale-cell is-assigned" data-row="1" data-period="4"><b></b></i>
+                <span class="grid-sector">02</span><i class="scale-cell is-assigned" data-row="2" data-period="1"><b></b></i><i class="scale-cell is-active is-assigned" data-row="2" data-period="2"><b></b></i><i class="scale-cell is-assigned" data-row="2" data-period="3"><b></b></i><i class="scale-cell" data-row="2" data-period="4"></i>
+                <span class="grid-sector">03</span><i class="scale-cell" data-row="3" data-period="1"></i><i class="scale-cell is-assigned" data-row="3" data-period="2"><b></b></i><i class="scale-cell" data-row="3" data-period="3"></i><i class="scale-cell is-assigned" data-row="3" data-period="4"><b></b></i>
+              </div>
+              <svg class="relationship-line" viewBox="0 0 100 100" preserveAspectRatio="none">
+                <path d="M8 55 H42 V45 H61 V19 H88" pathLength="1"/>
+                <circle cx="42" cy="55" r="1.2"/><circle cx="61" cy="45" r="1.2"/><circle cx="88" cy="19" r="1.2"/>
+              </svg>
+              <span class="relation-label relation-label-sector">SETOR</span>
+              <span class="relation-label relation-label-period">PERÍODO</span>
+              <span class="relation-label relation-label-person">PROFISSIONAL</span>
+            </div>
+            <div class="living-scale-footer"><span>ONDE</span><span>QUANDO</span><span>QUEM</span><strong>CONTEXTO</strong></div>
+            <figcaption id="living-scale-caption">Uma representação conceitual das relações entre setores, períodos e profissionais. Não representa dados de uma operação real.</figcaption>
+          </figure>
+        </div>
+        <ol class="scale-chapters" aria-label="Relações que compõem uma escala">
+          <li data-scale-chapter="0"><span>01</span> Onde</li>
+          <li data-scale-chapter="1"><span>02</span> Quando</li>
+          <li data-scale-chapter="2"><span>03</span> Quem</li>
+          <li data-scale-chapter="3" class="is-current"><span>04</span> Contexto</li>
+        </ol>
+      </div>
 
-<section class="section section-white" id="desafio"><div class="wrap"><div class="eyeline"><span>ESCALARE / VISÃO DE GESTÃO</span><span>01 — O CONTEXTO</span></div><div class="split home-context"><div data-reveal><span class="kicker">O DESAFIO DA GESTÃO</span><h2 class="section-heading">Por trás de cada<br>atendimento,<br><em>uma operação inteira.</em></h2></div><div class="editorial-copy" data-reveal><p>Profissionais com disponibilidades diferentes. Setores com necessidades próprias. Horários que precisam fazer sentido em conjunto.</p><p>A complexidade aparece quando essas informações ficam dispersas. O planejamento transforma essas relações em uma estrutura que pode ser compreendida e organizada.</p><a class="text-link" href="para-instituicoes.html">A perspectiva das instituições <span aria-hidden="true">↗</span></a></div></div></div></section>
-<section class="section home-method"><div class="wrap split"><div><span class="kicker">02 — COMO A ESCALARE ORGANIZA</span><h2 class="section-heading">Conectar o contexto.<br><em>Dar forma à escala.</em></h2><figure class="operation-map" data-reveal><svg viewBox="0 0 600 290" role="img" aria-label="Demanda, profissionais e horários se conectam ao planejamento de uma escala">
-  <path class="flow-path" d="M130 60H220Q250 60 250 100V145H350M130 230H220Q250 230 250 190V145M130 145H350" fill="none" stroke="#9dbdac" stroke-width="2"/>
-  <g fill="#eef4ee" stroke="#bdd0c3"><rect x="0" y="30" width="140" height="60" rx="3"/><rect x="0" y="115" width="140" height="60" rx="3"/><rect x="0" y="200" width="140" height="60" rx="3"/></g>
-  <g fill="#284c43" font-family="system-ui,sans-serif" font-size="14" text-anchor="middle"><text x="70" y="65">Demanda</text><text x="70" y="150">Profissionais</text><text x="70" y="235">Horários</text></g>
-  <rect x="350" y="76" width="240" height="138" fill="#102c38" rx="3"/><text x="376" y="111" fill="#a6d6c4" font-size="11" font-family="system-ui,sans-serif">PLANEJAMENTO</text>
-  <g fill="#d9e8df"><rect x="376" y="130" width="37" height="13" rx="1" opacity="0.35"/><rect x="423" y="130" width="37" height="13" rx="1" opacity="0.6"/><rect x="470" y="130" width="37" height="13" rx="1" opacity="0.85"/><rect x="517" y="130" width="37" height="13" rx="1" opacity="0.35"/><rect x="376" y="152" width="37" height="13" rx="1" opacity="0.6"/><rect x="423" y="152" width="37" height="13" rx="1" opacity="0.85"/><rect x="470" y="152" width="37" height="13" rx="1" opacity="0.35"/><rect x="517" y="152" width="37" height="13" rx="1" opacity="0.6"/><rect x="376" y="174" width="37" height="13" rx="1" opacity="0.85"/><rect x="423" y="174" width="37" height="13" rx="1" opacity="0.35"/><rect x="470" y="174" width="37" height="13" rx="1" opacity="0.6"/><rect x="517" y="174" width="37" height="13" rx="1" opacity="0.85"/></g>
-</svg><figcaption>Informações conectadas dão forma ao planejamento.</figcaption></figure></div><ol class="ruled-list"><li data-reveal><span class="folio">01</span><div><h3>Entender a necessidade</h3><p>O planejamento parte da rotina e das necessidades assistenciais da instituição.</p></div></li><li data-reveal><span class="folio">02</span><div><h3>Relacionar pessoas e horários</h3><p>Disponibilidades e períodos se conectam em uma visão organizada da escala.</p></div></li><li data-reveal><span class="folio">03</span><div><h3>Apoiar a continuidade</h3><p>A organização operacional tem um propósito: contribuir para a continuidade do atendimento.</p></div></li></ol></div></section>
-<section class="section section-white"><div class="wrap"><div class="section-intro"><div><span class="kicker">03 — NOSSA ATUAÇÃO</span><h2 class="section-heading">Gestão de escalas.<br>Visão de conjunto.</h2></div><p>Uma atuação especializada em organizar as relações que sustentam a rotina assistencial.</p></div><div class="solution-feature"><div data-reveal><span class="folio">PLANEJAMENTO + ORGANIZAÇÃO</span><h3>Gestão de escalas médicas</h3><p>Da leitura da demanda à organização dos profissionais e dos períodos de atendimento: uma abordagem conectada à realidade da operação.</p><a class="text-link" href="solucoes.html">Explorar soluções <span aria-hidden="true">↗</span></a></div><div><figure class="schedule" data-reveal aria-label="Representação conceitual de uma escala organizada por setores e períodos">
-  <div class="schedule-top"><span>VISÃO DA OPERAÇÃO</span><span>ESCALA / CONCEITO</span></div>
-  <div class="schedule-grid" aria-hidden="true"><small>SETORES</small><small>PERÍODO A</small><small>PERÍODO B</small><small>PERÍODO C</small><small>PERÍODO D</small><small>Setor A</small><span></span><span></span><span></span><span></span><small>Setor B</small><span></span><span></span><span></span><span></span><small>Setor C</small><span></span><span></span><span></span><span></span></div>
-  <div class="schedule-footer"><span>Pessoas + horários + contexto</span><span aria-hidden="true">↗</span></div>
-  <figcaption class="schedule-note">Ilustração conceitual. Não representa dados de uma operação real.</figcaption>
-</figure></div></div></div></section>
-<section class="section"><div class="wrap"><span class="kicker">04 — PESSOAS E INSTITUIÇÕES</span><div class="section-intro"><h2 class="section-heading">Dois contextos.<br>O cuidado em comum.</h2></div><div class="audiences"><article class="audience" data-reveal><span class="audience-symbol" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M5 27V9h11v18M16 5h11v22M2 27h28M8 13h5m-5 5h5m-5 5h5M20 10h3m-3 5h3m-3 5h3"/></svg></span><h3>Para instituições</h3><p>Planejamento, visibilidade e organização das escalas para quem precisa conduzir a operação assistencial.</p><a class="text-link" href="para-instituicoes.html">Sou gestor <span aria-hidden="true">↗</span></a></article><article class="audience" data-reveal><span class="audience-symbol" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="16" cy="10" r="5"/><path d="M6 28v-4a10 10 0 0 1 20 0v4M3 12a4 4 0 0 1 0 8m26-8a4 4 0 0 0 0 8"/></svg></span><h3>Para profissionais</h3><p>Um canal de relacionamento com orientações claras para quem participa da rotina do cuidado.</p><a class="text-link" href="para-profissionais.html">Sou profissional <span aria-hidden="true">↗</span></a></article></div></div></section>
-<section class="section ink-section"><div class="wrap split"><div data-reveal><span class="kicker">05 — ALÉM DA GRADE</span><h2 class="section-heading">O que torna uma escala<br><em>um instrumento de gestão?</em></h2></div><div class="editorial-copy" data-reveal><p>Uma grade mostra horários. Uma escala estruturada conecta esses horários às pessoas e às necessidades da instituição.</p><p>Conheça o percurso entre demanda, planejamento, profissionais e organização operacional.</p><a class="text-link" href="gestao-de-escalas-medicas.html">Entender a gestão de escalas <span aria-hidden="true">↗</span></a></div></div></section>
-<section class="section section-white" id="quem-somos"><div class="wrap split"><div><span class="kicker">06 — SOBRE A ESCALARE</span><h2 class="section-heading">Organização a serviço<br><em>da continuidade.</em></h2></div><div class="editorial-copy"><p>A Escalare é especializada em organização e gestão de escalas médicas. Atuamos na conexão entre profissionais, processos e necessidades assistenciais.</p><p>Uma visão de gestão que reconhece o contexto da instituição e o papel das pessoas na operação.</p><a class="text-link" href="sobre.html">Conheça a Escalare <span aria-hidden="true">↗</span></a></div></div></section>
-<section class="section"><div class="wrap editorial-shelf"><div><span class="kicker">07 — CONTEÚDOS</span><span class="editorial-status">Espaço editorial em preparação</span></div><div><h2 class="section-heading">A operação também<br>merece reflexão.</h2><div class="editorial-copy"><p>Gestão de escalas, planejamento e continuidade assistencial são os temas que vão orientar nosso espaço de conteúdo.</p></div><a class="text-link" href="conteudos.html">Conhecer o espaço editorial <span aria-hidden="true">↗</span></a></div></div></section><section class="closing"><div class="wrap"><div><span class="kicker">O PRÓXIMO PASSO</span><h2>Uma operação mais organizada começa com uma conversa.</h2></div><a class="action" href="contato.html?perfil=instituicao">Falar com a Escalare <span aria-hidden="true">↗</span></a></div></section>
+      <ol class="scale-mobile-sequence" aria-label="Como uma posição ganha contexto">
+        <li><span class="mobile-cell" aria-hidden="true"></span><div><small>ONDE</small><strong>Um setor</strong><p>A necessidade começa em um contexto da operação.</p></div></li>
+        <li><span class="mobile-cell has-period" aria-hidden="true"></span><div><small>QUANDO</small><strong>Um período</strong><p>A posição ganha organização no tempo.</p></div></li>
+        <li><span class="mobile-cell has-person" aria-hidden="true"></span><div><small>QUEM</small><strong>Uma presença</strong><p>O profissional passa a fazer parte da relação.</p></div></li>
+        <li><span class="mobile-cell has-context" aria-hidden="true"></span><div><small>CONTEXTO</small><strong>Uma escala compreensível</strong><p>Pessoas, horários e necessidades passam a ser vistos em conjunto.</p></div></li>
+      </ol>
+    </section>
+
+    <section class="human-story" id="pessoas-e-cuidado" data-human-story aria-labelledby="human-title">
+      <div class="human-cell-trail" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+      <div class="wrap human-layout">
+        <div class="human-copy">
+          <span class="kicker">03 — PESSOAS → CUIDADO</span>
+          <h2 id="human-title">Toda organização<br>termina <em>em pessoas.</em></h2>
+          <p>Uma escala estruturada conecta horários às pessoas e às necessidades da instituição. É assim que a organização operacional encontra seu propósito: apoiar a continuidade do atendimento.</p>
+          <nav class="audience-paths" aria-label="Caminhos para instituições e profissionais">
+            <a href="para-instituicoes.html"><span><small>PARA INSTITUIÇÕES</small>Conduzir a operação assistencial</span><b aria-hidden="true">↗</b></a>
+            <a href="para-profissionais.html"><span><small>PARA PROFISSIONAIS</small>Participar da rotina do cuidado</span><b aria-hidden="true">↗</b></a>
+          </nav>
+        </div>
+
+        <figure class="human-frame" data-human-frame aria-labelledby="human-caption">
+          <div class="human-frame-meta" aria-hidden="true"><span>PRESENÇA HUMANA</span><span>03 / 04</span></div>
+          <div class="human-grid" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+          <div class="human-presence" aria-hidden="true">
+            <span class="human-head"></span>
+            <span class="human-body"></span>
+            <span class="human-shoulder"></span>
+            <span class="human-marker"></span>
+          </div>
+          <span class="human-context" aria-hidden="true">SETOR · PERÍODO · PRESENÇA</span>
+          <figcaption id="human-caption">Presença humana em composição conceitual. A moldura preserva a célula que nasceu na escala.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="convergence closing" id="escalare" data-convergence aria-labelledby="convergence-title">
+      <div class="convergence-field" aria-hidden="true">
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M0 26H28V51H53V73H100M21 0V51M53 0V100M82 0V73"/></svg>
+        <span class="convergence-cell cell-a"></span><span class="convergence-cell cell-b"></span><span class="convergence-cell cell-c"></span><span class="convergence-cell cell-d"></span><span class="convergence-cell cell-e"></span>
+      </div>
+      <div class="wrap convergence-layout">
+        <div class="convergence-copy">
+          <span class="kicker">04 — CONVERGÊNCIA</span>
+          <p class="convergence-sequence">COMPLEXIDADE <span>→</span> ORGANIZAÇÃO <span>→</span> CLAREZA</p>
+          <h2 id="convergence-title">Organização a serviço<br><em>da continuidade.</em></h2>
+          <p>A Escalare é especializada em organização e gestão de escalas médicas, conectando profissionais, processos e necessidades assistenciais.</p>
+          <div class="convergence-actions">
+            <a class="action" href="contato.html?perfil=instituicao">Falar com a Escalare <span aria-hidden="true">↗</span></a>
+            <a class="convergence-link" href="sobre.html">Conheça a Escalare <span aria-hidden="true">→</span></a>
+          </div>
+        </div>
+        <div class="convergence-mark" aria-hidden="true"><span></span><strong>ESCALARE</strong><small>GESTÃO DE ESCALAS MÉDICAS</small></div>
+      </div>
+    </section>
 </main>
 <footer class="site-footer">
   <div class="wrap footer-layout">
