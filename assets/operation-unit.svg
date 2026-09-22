@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 680" fill="none">
+  <defs>
+    <linearGradient id="floor" x1="200" y1="200" x2="600" y2="600" gradientUnits="userSpaceOnUse"><stop stop-color="#fff"/><stop offset="1" stop-color="#d6e2da"/></linearGradient>
+    <linearGradient id="roof" x1="0" y1="-30" x2="125" y2="35" gradientUnits="userSpaceOnUse"><stop stop-color="#fff"/><stop offset="1" stop-color="#e6ece7"/></linearGradient>
+    <radialGradient id="shadow"><stop stop-color="#55796c" stop-opacity=".19"/><stop offset="1" stop-color="#55796c" stop-opacity="0"/></radialGradient>
+    <g id="room">
+      <path d="M0 0 65 36 65 83 0 47Z" fill="#d5e0d9" stroke="#c4d2c9" stroke-width=".7"/>
+      <path d="m65 36 65-36v47L65 83Z" fill="#e7eee8" stroke="#c4d2c9" stroke-width=".7"/>
+      <path d="m0 0 65-36 65 36-65 36Z" fill="url(#roof)" stroke="#c8d5cc"/>
+      <path d="m7 4 58 31 58-31M65-28v52" stroke="#d3ddd5" stroke-width=".8"/>
+      <path d="m10 18 44 24v21L10 39Z" fill="#183d48"/>
+      <path d="m76 42 41-23v21L76 63Z" fill="#71958e"/>
+      <path d="m25 26v19m15-10v19m50-20v21m13-29v21" stroke="#d3e0d8" stroke-width="1.5"/>
+    </g>
+    <g id="person"><ellipse cy="9" rx="10" ry="5" fill="#156f60" opacity=".12"/><path d="M-5 5V-6a5 5 0 0 1 10 0V5Z" fill="#17836f"/><circle cy="-13" r="4" fill="#246858"/></g>
+  </defs>
+  <ellipse cx="413" cy="464" rx="318" ry="124" fill="url(#shadow)"/>
+  <path d="m65 339 324-180 346 190v17L411 550 65 356Z" fill="#ccd9d1"/>
+  <path d="m65 339 324-180 346 190-324 184Z" fill="url(#floor)" stroke="#c7d5cb"/>
+  <g stroke="#c4d3c9" stroke-width=".75" opacity=".7"><path d="m118 369 324-181m-271 210 324-181m-271 211 324-181m-271 210 324-181m-271 210 324-181M118 310l346 190M172 279l346 191M226 249l346 191M280 219l346 191M334 189l346 191"/></g>
+  <path d="m184 370 235-131 180 100-237 133Z" fill="#bdcfc4"/>
+  <use href="#room" x="315" y="208"/><use href="#room" x="449" y="282"/>
+  <use href="#room" x="229" y="256"/><use href="#room" x="363" y="330"/>
+  <use href="#room" x="143" y="304"/><use href="#room" x="277" y="378"/>
+  <path d="m193 398 68 38 154-86-69-38Z" fill="#f2f7f0" stroke="#d1ded4"/>
+  <path d="m215 412 135-75" stroke="#267c67" stroke-width="2"/>
+  <use href="#person" x="241" y="397"/><use href="#person" x="279" y="376"/><use href="#person" x="322" y="352"/>
+  <path d="m220 440 36 20 26-15v12l-26 15-36-20Z" fill="#9db9ab"/>
+  <path d="m222 457 36 20 28-15" stroke="#bed0c4" stroke-width="7"/>
+  <path d="m362 495 50 28 222-125" stroke="#85ab97" stroke-width="1" stroke-dasharray="3 6"/>
+  <circle cx="634" cy="398" r="3" fill="#267c67"/>
+  <g transform="translate(491 513)">
+    <path d="m0 0 57-32 100 55-57 33Z" fill="#f7faf5" stroke="#b7cfc0"/>
+    <g stroke="#b7cfc0" stroke-width=".8"><path d="m19-11 100 55M38-21l100 55M20 11l57-32M40 22l57-32M60 33l57-32M80 44l57-32"/></g>
+    <path d="m25 13 10-6 13 7-10 6Zm38 21 10-6 13 7-10 6Zm21-34 10-6 13 7-10 6Z" fill="#4a9178"/>
+  </g>
+</svg>
