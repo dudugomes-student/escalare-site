@@ -1,5 +1,11 @@
 /* Home-only experience. Existing page styles and their tokens remain intact. */
 .home-experience { --operation-paper: #f4f6f3; --operation-ink: #102c38; --operation-green: #16786b; }
+.home-context { padding-top:60px; }
+.home-method { background:#eaf0eb; }
+.grid-bridge { position:relative; background-color:#e7eee8; background-image:linear-gradient(90deg,#c4d6c733 1px,transparent 1px),linear-gradient(#c4d6c733 1px,transparent 1px); background-size:calc(100% / 8) 56px; }
+.operation-scale-key { position:absolute; inset:auto 3% 85px 7%; display:flex; justify-content:space-between; opacity:0; transform:translateY(8px); pointer-events:none; font-size:8px; letter-spacing:.14em; color:#326b58; transition:opacity .3s,transform .3s; }
+.operation-story[data-stage="5"].is-webgl .operation-scale-key { opacity:1; transform:none; }
+.operation-story[data-stage="5"] .operation-annotation { opacity:0; }
 .experience-skip { position: fixed; top: 10px; left: 16px; z-index: 100000; padding: 12px 20px; background: white; color: #071b2c; transform: translateY(-180%); }
 .experience-skip:focus { transform: none; }
 .operation-story { position: relative; background: var(--operation-paper); color: var(--operation-ink); }
@@ -92,6 +98,12 @@
   .operation-story.is-enhanced .operation-stage { position: relative; top: auto; height: auto; min-height: 0; display: block; padding-top: 35px; }
   .operation-bridge { align-items: flex-start; flex-direction: column; padding: 34px 24px; gap: 10px; }
 }
+@media(min-width:901px) and (max-width:1000px) {
+ .operation-story.is-enhanced .operation-stage { top:80px; height:calc(100svh - 80px); }
+}
+@media(max-width:700px) { .home-context { padding-top:40px; } .operation-scale-key { bottom:80px; font-size:7px; } }
+.operation-invitation,.operation-figure-heading,.operation-visual figcaption span,.operation-illustration-note,.operation-chapters li { color:#536c62; }
+.operation-chapters li span { opacity:1; }
 @media (max-width: 380px) {
   .operation-stage { padding-inline: 20px; }
   .operation-copy h1, .operation-story.is-enhanced .operation-copy h1 { font-size: 34px; }

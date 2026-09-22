@@ -1,4 +1,4 @@
-# Prévia e validação da prova de conceito
+# Prévia e validação do site institucional
 
 O site continua sendo HTML/CSS/JavaScript estático. Node e Playwright são usados somente para desenvolvimento e testes; não fazem parte do deploy.
 
@@ -19,25 +19,35 @@ Os scripts usam `playwright-core` e um navegador Edge local. O pacote pode estar
 ```powershell
 node tools/verify-experience.cjs
 node tools/measure-experience.cjs
-```
-
-Nesta implementação, Node 22.16.0 e playwright-core 1.55.0 foram baixados para a pasta temporária `escalare-poc-tools`, sem instalação global. Para repetir na mesma máquina enquanto esses arquivos existirem:
-
-```powershell
-$pocTools = Join-Path $env:TEMP 'escalare-poc-tools'
-$env:PLAYWRIGHT_PATH = Join-Path $pocTools 'package'
-& (Join-Path $pocTools 'node.exe') tools/verify-experience.cjs
+node tools/review-site.cjs
+node tools/audit-accessibility.cjs
+node tools/verify-resilience.cjs
 ```
 
 Os testes registram estados, capturas e resultados em `output/poc-review/`, ignorado pelo Git. O cenário de biblioteca ausente provoca intencionalmente um HTTP 404 em uma página isolada para testar a recuperação.
 
-Cobertura: cinco estados e reversão desktop, reversão mobile, pausa fora da viewport, larguras de 320 a 1440 px, mudança de breakpoint, preferência de movimento inicial e alterada em execução, ausência/perda de WebGL, dependência indisponível, JavaScript desativado, menu por teclado e smoke tests das seis páginas internas.
+Nesta evolução, Playwright e axe-core estão isolados em `output/poc-tools/node_modules/`, sem dependência de produção. Para repetir nesta máquina:
+
+```powershell
+$env:PLAYWRIGHT_PATH = (Resolve-Path 'output/poc-tools/node_modules/playwright-core').Path
+node tools/verify-experience.cjs
+node tools/review-site.cjs
+node tools/verify-resilience.cjs
+node tools/audit-accessibility.cjs
+node tools/measure-experience.cjs
+```
+
+`review-site.cjs` cobre as nove páginas, links e âncoras, larguras de 360 a 1920, preparação de mensagem sem envio, foco do menu, histórico e 404. Também rasteriza o SVG autoral de Open Graph para PNG.
+`audit-accessibility.cjs` verifica WCAG A/AA com axe-core; resultados incompletos exigem avaliação humana, especialmente textos sobre SVG/fundos gráficos.
+`verify-resilience.cjs` cobre níveis de qualidade, orientação, economia de dados, memória limitada, retorno pelo histórico, diagrama interativo e eventos controlados de visibilidade.
+
+Cobertura da suíte original: cinco estados e reversão desktop, reversão mobile, pausa fora da viewport, larguras de 320 a 1440 px, mudança de breakpoint, preferência de movimento inicial e alterada em execução, ausência/perda de WebGL, dependência indisponível, JavaScript desativado, menu por teclado e smoke tests das oito páginas internas.
 
 ## Limites da medição
 
 As medições são locais, sem simulação de conexão lenta, em Edge headless. LCP/CLS locais não equivalem a métricas de campo, Lighthouse ou testes em iPhone/Android físicos. A abertura do contexto WebGL ainda pode causar trabalho perceptível no thread principal em alguns dispositivos.
 
-A cena mantém uma só superfície WebGL. Salas e profissionais são instâncias de geometria compartilhada. Há 12 salas no desktop e 8 no mobile, exclusivamente como representação conceitual, sem corresponder a clientes, profissionais ou escalas reais. O pixel ratio fica limitado a 1,6/1,25, e a cena só desenha quando há mudança e está visível. O mobile não usa sombras dinâmicas nem seção presa.
+A cena mantém uma só superfície WebGL. Salas e profissionais são instâncias de geometria compartilhada. Há 12 salas no desktop e 8 no mobile, exclusivamente como representação conceitual, sem corresponder a clientes, profissionais ou escalas reais. O pixel ratio fica limitado a 1,6 no desktop, 1,35 no tablet e 1,25 no mobile. A cena só desenha quando há mudança e está visível. Tablet e mobile não usam sombras dinâmicas; mobile não usa seção presa.
 
 O fallback SVG é a apresentação inicial e definitiva em movimento reduzido, economia de dados, memória reportada inferior a 4 GB, telas muito baixas ou indisponibilidade gráfica. Esses sinais são critérios conservadores, não uma medição completa da capacidade do aparelho. A cena também reduz qualidade após renderizações persistentemente lentas e retorna ao SVG se necessário.
 

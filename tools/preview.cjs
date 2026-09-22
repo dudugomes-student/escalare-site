@@ -13,7 +13,11 @@ function createServer() {
     const file = path.resolve(root, '.' + (pathname.endsWith('/') ? pathname + 'index.html' : pathname));
     if (!file.startsWith(root + path.sep)) { response.writeHead(403).end(); return; }
     fs.readFile(file, (error, content) => {
-      if (error) { response.writeHead(404).end('Not found'); return; }
+      if (error) {
+        response.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
+        response.end(fs.readFileSync(path.join(root, '404.html'), 'utf8'));
+        return;
+      }
       response.writeHead(200, { 'Content-Type': types[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-store' });
       response.end(content);
     });

@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Página não encontrada | Escalare</title>
+<style>*{box-sizing:border-box}body{margin:0;background:#071b2c;color:#edf4ef;font-family:system-ui,sans-serif;min-height:100svh;display:grid;place-items:center;padding:32px}main{max-width:720px}small{font-size:11px;letter-spacing:.17em;color:#83c9b5}h1{font-size:clamp(40px,7vw,76px);font-weight:400;letter-spacing:-.05em;line-height:1.1}p{max-width:480px;color:#b7cacb;line-height:1.8}a,button{display:inline-block;color:#071b2c;background:#d9ece0;padding:15px 22px;margin-top:25px;font-size:14px;text-decoration:none;border:0;border-radius:3px;cursor:pointer}a:focus-visible,button:focus-visible{outline:3px solid #80d7bc;outline-offset:5px}</style></head>
+<body><main><small>ESCALARE / 404</small><h1>Vamos encontrar<br>o caminho certo.</h1><p>Esta página não foi encontrada. Volte ao início para explorar a atuação da Escalare.</p><a id="home-link" href="https://escalaregestaoempresarial.com/">Ir para o início ↗</a></main>
+<script>
+// GitHub Pages project sites live under /repository/. Custom domains live at root.
+const segments = location.pathname.split('/').filter(Boolean);
+const projectHost = location.hostname.endsWith('.github.io');
+const preview = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
+document.getElementById('home-link').href = projectHost || (preview && segments[0] === 'escalare-site') ? '/' + segments[0] + '/index.html' : '/index.html';
+</script></body></html>

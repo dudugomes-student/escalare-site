@@ -5,14 +5,16 @@ const smooth = (a, b, value) => { const t = THREE.MathUtils.clamp((value - a) / 
 
 // One persistent set of rooms: floors become cells, walls become dividers,
 // and each professional becomes an assignment inside the very same cell.
-export function createOperationScene(host, canvas, context, { mobile, onFailure }) {
+export function createOperationScene(host, canvas, context, { mobile, tablet = false, onFailure }) {
+  const quality = mobile ? 'mobile' : tablet ? 'tablet' : 'desktop';
+  const shadows = !mobile && !tablet;
   const renderer = new THREE.WebGLRenderer({ canvas, context, alpha: true, antialias: true, powerPreference: 'low-power' });
   renderer.setClearColor(0x000000, 0);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, mobile ? 1.25 : 1.6));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, mobile ? 1.25 : tablet ? 1.35 : 1.6));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.25;
-  renderer.shadowMap.enabled = !mobile;
+  renderer.shadowMap.enabled = shadows;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
   const scene = new THREE.Scene();
@@ -22,7 +24,7 @@ export function createOperationScene(host, canvas, context, { mobile, onFailure 
   scene.add(new THREE.HemisphereLight(0xf8fff8, 0x789089, 3));
   const key = new THREE.DirectionalLight(0xfffaf0, 4);
   key.position.set(-4, 10, 5);
-  key.castShadow = !mobile;
+  key.castShadow = shadows;
   key.shadow.mapSize.set(1024, 1024);
   Object.assign(key.shadow.camera, { left: -7, right: 7, top: 7, bottom: -7, near: .5, far: 25 });
   key.shadow.normalBias = .035;
@@ -45,7 +47,7 @@ export function createOperationScene(host, canvas, context, { mobile, onFailure 
   const roofMat = material(0xf5f6ee, { transparent: true });
   const rows = mobile ? 2 : 3;
   const count = rows * 4;
-  const mesh = (g, m, amount) => { const obj = new THREE.InstancedMesh(g, m, amount); obj.instanceMatrix.setUsage(THREE.DynamicDrawUsage); obj.castShadow = !mobile; obj.receiveShadow = !mobile; obj.frustumCulled = false; rig.add(obj); return obj; };
+  const mesh = (g, m, amount) => { const obj = new THREE.InstancedMesh(g, m, amount); obj.instanceMatrix.setUsage(THREE.DynamicDrawUsage); obj.castShadow = shadows; obj.receiveShadow = shadows; obj.frustumCulled = false; rig.add(obj); return obj; };
   const floors = mesh(box, white, count);
   const walls = mesh(box, wallMat, count * 2);
   const fronts = mesh(box, blue, count);
@@ -54,12 +56,13 @@ export function createOperationScene(host, canvas, context, { mobile, onFailure 
   const bodies = mesh(box, green, count);
   const heads = mesh(geometry(new THREE.SphereGeometry(1, 12, 8)), green, count);
   const routes = mesh(box, material(0x97b9a7), 3);
+  const markers = mesh(box, material(0xc7dcd1), count * 2);
   const baseMat = material(0xe0e8dd);
   const base = new THREE.Mesh(box, baseMat);
-  base.receiveShadow = !mobile;
+  base.receiveShadow = shadows;
   rig.add(base);
   const entry = new THREE.Mesh(box, blue);
-  entry.castShadow = !mobile;
+  entry.castShadow = shadows;
   rig.add(entry);
 
   // A small generated contact shadow, not an external texture or postprocessing pass.
@@ -84,14 +87,14 @@ export function createOperationScene(host, canvas, context, { mobile, onFailure 
   ground.rotation.x = -Math.PI / 2;
   ground.position.y = -.22;
   ground.receiveShadow = true;
-  ground.visible = !mobile;
+  ground.visible = shadows;
   scene.add(ground);
 
   const temp = new THREE.Object3D();
   const set = (obj, index, x, y, z, sx, sy, sz) => {
     temp.position.set(x, y, z); temp.scale.set(sx, Math.max(.001, sy), sz); temp.rotation.set(0, 0, 0); temp.updateMatrix(); obj.setMatrixAt(index, temp.matrix);
   };
-  const instances = [floors, walls, fronts, windows, roofs, bodies, heads, routes];
+  const instances = [floors, walls, fronts, windows, roofs, bodies, heads, routes, markers];
   let progress = 0;
   let visible = true;
   let disposed = false;
@@ -105,7 +108,7 @@ export function createOperationScene(host, canvas, context, { mobile, onFailure 
 
   function update(value) {
     progress = value;
-    const open = smooth(.06, .37, value);
+    const open = smooth(.08, .37, value);
     const people = smooth(.27, .5, value);
     const ordered = smooth(.48, .76, value);
     const grid = smooth(.66, 1, value);
@@ -143,21 +146,24 @@ export function createOperationScene(host, canvas, context, { mobile, onFailure 
       set(bodies, i, px, mix(.43, .29, grid), pz, mix(.16, .92, grid) * scale, mix(.42, .055, grid) * scale, mix(.16, .45, grid) * scale);
       const headSize = .115 * scale * (1 - grid);
       set(heads, i, px, .77, pz, Math.max(.001, headSize), Math.max(.001, headSize), Math.max(.001, headSize));
+      // Room details flatten into the secondary marks of the same schedule cell.
+      set(markers, i * 2, x + .45, .27, z - .25, mix(.28, .42, grid), .025, .055);
+      set(markers, i * 2 + 1, x + .4, .27, z - .10, mix(.20, .32, grid), .025, .055);
     }
     roofs.visible = value < .68;
     roofMat.opacity = 1 - smooth(.15, .38, value);
-    roofs.castShadow = !mobile && roofMat.opacity > .7;
+    roofs.castShadow = shadows && roofMat.opacity > .7;
     heads.visible = grid < .99 && people > .001;
     bodies.visible = people > .001;
-    routes.visible = ordered > .01;
-    set(routes, 0, 0, .218, 0, mix(.035, .02, grid), .012, rows * 1.75);
-    set(routes, 1, -2.05, .218, 0, .02, .012, rows * 1.75);
-    set(routes, 2, 2.05, .218, 0, .02, .012, rows * 1.75);
+    // The corridors are present from the start and become dividers, rather than appearing as a new scene.
+    set(routes, 0, 0, .025, 0, mix(.34, .025, grid), .012, mix(rows * 2.05, rows * 1.68, grid));
+    set(routes, 1, -2.05, .025, 0, mix(.15, .02, grid), .012, rows * 1.75);
+    set(routes, 2, 2.05, .025, 0, mix(.15, .02, grid), .012, rows * 1.75);
     for (const obj of instances) obj.instanceMatrix.needsUpdate = true;
-    const approach = smooth(0, .36, value);
+    const approach = Math.sin(smooth(0, .75, value) * Math.PI);
     const distance = mobile ? 1.14 : 1;
-    camera.position.set(mix(10.6 - approach * .9, .8, grid) * distance, mix(9 + approach * .45, 13.8, grid) * distance, mix(12.3 - approach * 1.5, 5.4, grid) * distance);
-    gaze.set(0, mix(.28, 0, grid), 0);
+    camera.position.set(mix(10.6 - approach * 2.2, .35, grid) * distance, mix(9 + approach * .8, 15.4, grid) * distance, mix(12.3 - approach * 2.8, 2.9, grid) * distance);
+    gaze.set(mix(-.28 * approach, 0, grid), mix(.28 + approach * .15, 0, grid), 0);
     camera.lookAt(gaze);
     requestRender();
   }
@@ -200,7 +206,7 @@ export function createOperationScene(host, canvas, context, { mobile, onFailure 
     update,
     setVisible(value) { visible = value; if (value) requestRender(); else { cancelAnimationFrame(frame); frame = 0; } },
     renderNow() { cancelAnimationFrame(frame); render(); },
-    getDiagnostics() { return { renders, drawCalls: renderer.info.render.calls, triangles: renderer.info.render.triangles, pixelRatio: renderer.getPixelRatio(), progress, reducedQuality }; },
+    getDiagnostics() { return { renders, drawCalls: renderer.info.render.calls, triangles: renderer.info.render.triangles, pixelRatio: renderer.getPixelRatio(), progress, reducedQuality, quality }; },
     dispose() {
       if (disposed) return;
       disposed = true; cancelAnimationFrame(frame); resizeObserver.disconnect();

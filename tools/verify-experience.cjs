@@ -125,9 +125,9 @@ const executablePath = process.env.BROWSER_PATH || 'C:/Program Files (x86)/Micro
     await plain.goto(base);
     assert(await plain.locator('h1').isVisible());
     assert(await plain.locator('.operation-cta').isVisible());
-    assert.equal(await plain.locator('.card-feature').first().evaluate(el => getComputedStyle(el).opacity), '1');
+    assert.equal(await plain.locator('.solution-feature').first().evaluate(el => getComputedStyle(el).opacity), '1');
     results.push({ test: 'no-js-content-and-cta', pass: true });
-    for (const file of ['para-clinicas.html', 'para-medicos.html', 'solucoes.html', 'sobre.html', 'contato.html', 'privacidade.html']) {
+    for (const file of ['para-instituicoes.html', 'para-profissionais.html', 'solucoes.html', 'gestao-de-escalas-medicas.html', 'sobre.html', 'conteudos.html', 'contato.html', 'privacidade.html']) {
       const response = await page.goto(base + file, { waitUntil: 'networkidle' });
       assert.equal(response.status(), 200);
       assert.equal(await page.locator('h1').count(), 1);

@@ -2,13 +2,14 @@ const story = document.querySelector('[data-operation-story]');
 const host = document.querySelector('[data-operation-render]');
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const compact = matchMedia('(max-width: 900px)');
+const tablet = matchMedia('(min-width: 901px) and (max-width: 1180px)');
 const shortScreen = matchMedia('(max-height: 570px)');
 const connection = navigator.connection;
 const stages = [
   ['Unidade de saúde', 'O cuidado começa com uma operação conectada.'],
   ['Setores conectados', 'Por dentro da unidade, cada setor tem seu contexto.'],
   ['Profissionais', 'Pessoas, setores e horários precisam funcionar juntos.'],
-  ['Relações que se organizam', 'Cada profissional encontra seu lugar na operação.'],
+  ['Plantões e conexões', 'Pessoas e períodos se alinham em uma visão de conjunto.'],
   ['Da unidade à escala', 'A mesma operação. Agora, uma escala compreensível.']
 ];
 let scene;
@@ -82,7 +83,7 @@ async function enhance() {
     if (ticket !== generation || disposed) { context.getExtension('WEBGL_lose_context')?.loseContext(); return; }
     window.gsap.registerPlugin(window.ScrollTrigger);
     host.append(canvas);
-    scene = module.createOperationScene(host, canvas, context, { mobile: compact.matches, onFailure: () => useFallback('render-fallback') });
+    scene = module.createOperationScene(host, canvas, context, { mobile: compact.matches, tablet: tablet.matches, onFailure: () => useFallback('render-fallback') });
     await scene.prepare();
     if (ticket !== generation || disposed) return;
     scene.setVisible(inView);
@@ -94,7 +95,7 @@ async function enhance() {
     timeline = window.gsap.timeline({
       scrollTrigger: {
         trigger: compact.matches ? host : story,
-        start: compact.matches ? 'clamp(top 65%)' : 'top 96px',
+        start: compact.matches ? 'clamp(top 65%)' : () => `top ${document.getElementById('siteHeader').offsetHeight}px`,
         end: compact.matches ? 'bottom 35%' : () => `+=${Math.max(1, story.offsetHeight - story.querySelector('.operation-stage').offsetHeight)}`,
         scrub: compact.matches ? .22 : .65,
         invalidateOnRefresh: true,
@@ -119,6 +120,7 @@ function onVisibility() { scene?.setVisible(inView && !document.hidden); }
 document.addEventListener('visibilitychange', onVisibility);
 reducedMotion.addEventListener('change', enhance);
 compact.addEventListener('change', enhance);
+tablet.addEventListener('change', enhance);
 shortScreen.addEventListener('change', enhance);
 connection?.addEventListener('change', enhance);
 window.addEventListener('pagehide', () => { disposed = true; generation++; teardown(); });
