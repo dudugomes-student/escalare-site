@@ -3,7 +3,6 @@ const host = document.querySelector('[data-operation-render]');
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const compact = matchMedia('(max-width: 900px)');
 const tablet = matchMedia('(min-width: 901px) and (max-width: 1180px)');
-const shortScreen = matchMedia('(max-height: 570px)');
 const connection = navigator.connection;
 const stages = [
   ['Unidade de saúde', 'O cuidado começa com uma operação conectada.'],
@@ -20,6 +19,28 @@ let inView = true;
 let disposed = false;
 let failed = false;
 const scriptPromises = new Map();
+
+function createWebGL2Surface() {
+  const attributes = { alpha: true, antialias: true, powerPreference: 'low-power' };
+  let canvas = document.createElement('canvas');
+  canvas.setAttribute('aria-hidden', 'true');
+  let context = null;
+  try { context = canvas.getContext('webgl2', { ...attributes, failIfMajorPerformanceCaveat: true }); }
+  catch { /* Retry below with a compatibility-oriented context. */ }
+  if (context) return { canvas, context, compatibilityContext: false };
+
+  canvas = document.createElement('canvas');
+  canvas.setAttribute('aria-hidden', 'true');
+  try {
+    context = canvas.getContext('webgl2', {
+      ...attributes,
+      antialias: false,
+      powerPreference: 'default',
+      failIfMajorPerformanceCaveat: false
+    });
+  } catch { context = null; }
+  return context ? { canvas, context, compatibilityContext: true } : null;
+}
 
 function loadScript(filename) {
   if (!scriptPromises.has(filename)) scriptPromises.set(filename, new Promise((resolve, reject) => {
@@ -65,25 +86,29 @@ async function enhance() {
   const ticket = ++generation;
   teardown();
   if (disposed) return;
-  if (reducedMotion.matches || connection?.saveData || shortScreen.matches || failed || (navigator.deviceMemory && navigator.deviceMemory < 4)) {
+  if (reducedMotion.matches || failed) {
     story.dataset.mode = reducedMotion.matches ? 'reduced-motion' : 'static';
     return;
   }
   story.dataset.mode = 'loading';
-  const canvas = document.createElement('canvas');
-  canvas.setAttribute('aria-hidden', 'true');
-  let context;
-  try { context = canvas.getContext('webgl2', { alpha: true, antialias: true, powerPreference: 'low-power', failIfMajorPerformanceCaveat: true }); }
-  catch { story.dataset.mode = 'no-webgl'; return; }
-  if (!context) { story.dataset.mode = 'no-webgl'; return; }
+  const surface = createWebGL2Surface();
+  if (!surface) { story.dataset.mode = 'no-webgl'; return; }
+  const { canvas, context, compatibilityContext } = surface;
+  const lowMemory = Number.isFinite(navigator.deviceMemory) && navigator.deviceMemory < 4;
+  const simplified = compatibilityContext || connection?.saveData === true || lowMemory;
   try {
-    // No large optional downloads on reduced-motion, save-data or unsupported devices.
+    // Reduced motion and unavailable WebGL stay static; softer constraints use a lighter scene.
     await loadScript('gsap.min.js');
     const [, module] = await Promise.all([loadScript('ScrollTrigger.min.js'), import('./operation-scene.js')]);
     if (ticket !== generation || disposed) { context.getExtension('WEBGL_lose_context')?.loseContext(); return; }
     window.gsap.registerPlugin(window.ScrollTrigger);
     host.append(canvas);
-    scene = module.createOperationScene(host, canvas, context, { mobile: compact.matches, tablet: tablet.matches, onFailure: () => useFallback('render-fallback') });
+    scene = module.createOperationScene(host, canvas, context, {
+      mobile: compact.matches,
+      tablet: tablet.matches,
+      simplified,
+      onFailure: () => useFallback('render-fallback')
+    });
     await scene.prepare();
     if (ticket !== generation || disposed) return;
     scene.setVisible(inView);
@@ -104,7 +129,8 @@ async function enhance() {
     });
     timeline.to(playhead, { progress: 1, duration: 1, ease: 'none', onUpdate: () => { scene?.update(playhead.progress); showStage(playhead.progress); } });
     window.ScrollTrigger.refresh();
-  } catch {
+  } catch (error) {
+    console.warn('[Escalare experience] Enhancement failed; using the static fallback.', error);
     context.getExtension('WEBGL_lose_context')?.loseContext();
     canvas.remove();
     if (ticket === generation) useFallback('dependency-fallback');
@@ -121,8 +147,7 @@ document.addEventListener('visibilitychange', onVisibility);
 reducedMotion.addEventListener('change', enhance);
 compact.addEventListener('change', enhance);
 tablet.addEventListener('change', enhance);
-shortScreen.addEventListener('change', enhance);
-connection?.addEventListener('change', enhance);
+connection?.addEventListener?.('change', enhance);
 window.addEventListener('pagehide', () => { disposed = true; generation++; teardown(); });
 window.addEventListener('pageshow', event => { if (event.persisted) { disposed = false; enhance(); } });
 

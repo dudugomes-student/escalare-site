@@ -5,12 +5,12 @@ const smooth = (a, b, value) => { const t = THREE.MathUtils.clamp((value - a) / 
 
 // One persistent set of rooms: floors become cells, walls become dividers,
 // and each professional becomes an assignment inside the very same cell.
-export function createOperationScene(host, canvas, context, { mobile, tablet = false, onFailure }) {
-  const quality = mobile ? 'mobile' : tablet ? 'tablet' : 'desktop';
-  const shadows = !mobile && !tablet;
+export function createOperationScene(host, canvas, context, { mobile, tablet = false, simplified = false, onFailure }) {
   const renderer = new THREE.WebGLRenderer({ canvas, context, alpha: true, antialias: true, powerPreference: 'low-power' });
   renderer.setClearColor(0x000000, 0);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, mobile ? 1.25 : tablet ? 1.35 : 1.6));
+  const quality = simplified ? 'simplified' : mobile ? 'mobile' : tablet ? 'tablet' : 'desktop';
+  const shadows = !mobile && !tablet && !simplified;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, simplified ? 1 : mobile ? 1.25 : tablet ? 1.35 : 1.6));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.25;

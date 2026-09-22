@@ -19,15 +19,15 @@ const assert = require('node:assert/strict');
    await page.waitForFunction(q=>document.querySelector('[data-operation-story]').getOperationDiagnostics().quality===q,expected);
    assert.equal(await page.locator('.operation-render canvas').count(),1);
   }
-  results.push({test:'desktop/tablet/mobile rebuilds with one canvas',pass:true});
+  results.push({test:'desktop/tablet/mobile quality changes keep one canvas',pass:true});
   await page.setViewportSize({width:844,height:390});
-  await page.waitForFunction(()=>document.querySelector('[data-operation-story]').dataset.mode==='static');
-  assert.equal(await page.locator('.operation-render canvas').count(),0);
+  await page.waitForFunction(()=>document.querySelector('[data-operation-story]').dataset.mode==='mobile-webgl');
+  assert.equal(await page.locator('.operation-render canvas').count(),1);
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
   await page.screenshot({path:path.resolve(__dirname,'../output/poc-review/landscape.png')});
   await page.setViewportSize({width:390,height:844});
   await page.waitForFunction(()=>document.querySelector('[data-operation-story]').dataset.mode==='mobile-webgl');
-  results.push({test:'portrait/landscape fallback and restoration',pass:true});
+  results.push({test:'portrait/landscape keep WebGL with responsive composition',pass:true});
   // Controlled visibility events validate the handler; this does not emulate a physical OS tab.
   await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});document.dispatchEvent(new Event('visibilitychange'));});
   const before=(await diagnostics()).renders;
@@ -50,10 +50,12 @@ const assert = require('node:assert/strict');
    },reason);
    const limited=await context.newPage();const requests=[];limited.on('request',r=>requests.push(r.url()));
    await limited.goto(base,{waitUntil:'networkidle'});
-   await limited.waitForFunction(()=>document.querySelector('[data-operation-story]').dataset.mode==='static');
-   assert(!requests.some(url=>url.includes('/vendor/')));
-   assert(await limited.locator('.operation-fallback').isVisible());
-   results.push({test:reason+' uses SVG without vendor downloads',pass:true});
+   await limited.waitForFunction(()=>document.querySelector('[data-operation-story]').dataset.mode==='mobile-webgl');
+   const data=await limited.locator('[data-operation-story]').evaluate(el=>el.getOperationDiagnostics());
+   assert.equal(data.quality,'simplified');
+   assert(requests.some(url=>url.includes('/vendor/')));
+   assert.equal(await limited.locator('.operation-render canvas').count(),1);
+   results.push({test:reason+' uses simplified WebGL',pass:true});
    await context.close();
   }
   await page.goto(base+'gestao-de-escalas-medicas.html',{waitUntil:'networkidle'});

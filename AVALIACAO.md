@@ -40,7 +40,7 @@ Experiência inicial seguida de ponte gráfica, contexto operacional, processo, 
 
 ## Three.js
 
-Mantém a arquitetura procedural e uma única superfície WebGL. Níveis desktop/tablet/mobile, pixel ratio limitado a 1,6/1,35/1,25 e fallback em condições restritas. Corredores permanecem na transformação e os detalhes das salas viram marcas da escala.
+Mantém a arquitetura procedural e uma única superfície WebGL. A experiência usa qualidade desktop, tablet, mobile ou simplificada, com pixel ratio limitado a 1,6/1,35/1,25/1 e fallback somente quando WebGL2 não está disponível, há falha real de renderização ou a preferência de movimento reduzido exige a composição estática. Corredores permanecem na transformação e os detalhes das salas viram marcas da escala.
 
 ## GSAP / ScrollTrigger
 
@@ -76,7 +76,7 @@ Verificado em 360, 375, 390, 412, 430 e 768 px. Menu amplo com gerenciamento de 
 
 ## Fallback
 
-SVG existente refinado semanticamente. Nenhuma biblioteca 3D baixada nos testes de WebGL indisponível, economia de dados ou memória reportada de 2 GB. A falha de dependência preserva o conteúdo e CTA.
+SVG existente refinado semanticamente. Nenhuma biblioteca 3D é baixada quando WebGL2 está realmente indisponível ou há preferência por movimento reduzido. Economia de dados e memória reportada de 2 GB usam a experiência WebGL2 simplificada. A falha de dependência preserva o conteúdo e CTA.
 
 ## Reduced motion
 

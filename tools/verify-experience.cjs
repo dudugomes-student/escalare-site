@@ -72,6 +72,12 @@ const executablePath = process.env.BROWSER_PATH || 'C:/Program Files (x86)/Micro
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `overflow at ${width}`);
     }
     results.push({ test: 'responsive-widths-320-through-1440', pass: true });
+    await page.setViewportSize({ width: 1200, height: 520 });
+    await page.waitForTimeout(600);
+    assert.equal((await diagnostics()).mode, 'desktop-webgl');
+    assert.equal(await page.locator('.operation-render canvas').count(), 1);
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    results.push({ test: 'low-height-keeps-webgl', ...await diagnostics() });
     await page.setViewportSize({ width: 390, height: 844 });
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.waitForTimeout(450);
@@ -99,6 +105,22 @@ const executablePath = process.env.BROWSER_PATH || 'C:/Program Files (x86)/Micro
     assert(!requests.some(url => /vendor\//.test(url)));
     assert(await fallback.locator('.operation-cta').isVisible());
     results.push({ test: 'no-webgl-no-vendor-downloads', pass: true });
+    const compatibilityContext = await browser.newContext({ viewport: { width: 1200, height: 520 } });
+    await compatibilityContext.addInitScript(() => {
+      const get = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function(type, options, ...rest) {
+        if (type === 'webgl2' && options?.failIfMajorPerformanceCaveat) return null;
+        return get.call(this, type, options, ...rest);
+      };
+    });
+    const compatibilityPage = await compatibilityContext.newPage();
+    await compatibilityPage.goto(base, { waitUntil: 'networkidle' });
+    await compatibilityPage.waitForFunction(() => document.querySelector('[data-operation-story]').dataset.mode === 'desktop-webgl');
+    const compatibilityDiagnostics = await compatibilityPage.locator('[data-operation-story]').evaluate(el => el.getOperationDiagnostics());
+    assert.equal(compatibilityDiagnostics.quality, 'simplified');
+    assert.equal(await compatibilityPage.locator('.operation-render canvas').count(), 1);
+    results.push({ test: 'major-performance-caveat-uses-simplified-webgl', ...compatibilityDiagnostics });
+    await compatibilityContext.close();
     await fallback.locator('.mobile-toggle').click();
     assert.equal(await fallback.locator('.mobile-toggle').getAttribute('aria-expanded'), 'true');
     await fallback.keyboard.press('Escape');
