@@ -5,8 +5,12 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const assert = require('node:assert/strict');
 const pages = ['index.html','solucoes.html','gestao-de-escalas-medicas.html','para-instituicoes.html','para-profissionais.html','sobre.html','conteudos.html','contato.html','privacidade.html'];
+const internalSceneByPage = {
+  'gestao-de-escalas-medicas.html': 'management',
+  'para-instituicoes.html': 'institutions',
+  'para-profissionais.html': 'professional'
+};
 const output = path.resolve(__dirname, '../output/poc-review');
-const root = path.resolve(__dirname, '..');
 (async () => {
   await fs.mkdir(output, {recursive:true});
   const server = createServer();
@@ -43,10 +47,17 @@ const root = path.resolve(__dirname, '..');
       assert.deepEqual(broken,[],file+' broken links');
       const schema = await page.locator('script[type="application/ld+json"]').allTextContents();
       schema.forEach(text=>JSON.parse(text));
-      if(file!=='index.html') assert.equal(await page.locator('script[src*="vendor"],canvas').count(),0,file);
+      if(file!=='index.html') assert.equal(await page.locator('script[src*="vendor"]').count(),0,file);
+      if(internalSceneByPage[file]) {
+        const type=internalSceneByPage[file];
+        await page.waitForFunction(sceneType=>document.querySelector(`[data-internal-scene="${sceneType}"]`)?.dataset.renderMode==='full',type);
+        assert.equal(await page.locator(`[data-internal-scene="${type}"] canvas`).count(),1,file);
+      } else if(file!=='index.html') {
+        assert.equal(await page.locator('canvas').count(),0,file);
+      }
       for(const width of [360,375,390,412,430,768,1024,1440,1920]) {
         await page.setViewportSize({width,height:900});
-        await page.waitForTimeout(file==='index.html'?220:30);
+        await page.waitForTimeout(file==='index.html'?220:150);
         const overflow=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth}));
         assert(overflow.scroll <= overflow.width, file+' overflow '+JSON.stringify(overflow));
       }
@@ -54,10 +65,10 @@ const root = path.resolve(__dirname, '..');
       // Reveal every section before full-page review.
       await page.evaluate(async()=>{for(let y=0;y<document.body.scrollHeight;y+=600){scrollTo({top:y,behavior:'instant'});await new Promise(r=>setTimeout(r,60));}scrollTo({top:0,behavior:'instant'});});
       await page.waitForTimeout(800);
-      await page.screenshot({path:path.join(output,file.replace('.html','')+'-desktop.png'),fullPage:true});
+      await page.screenshot({path:path.join(output,file.replace('.html','')+'-desktop.png'),fullPage:false});
       await page.setViewportSize({width:390,height:844});
       await page.waitForTimeout(600);
-      await page.screenshot({path:path.join(output,file.replace('.html','')+'-mobile.png'),fullPage:true});
+      await page.screenshot({path:path.join(output,file.replace('.html','')+'-mobile.png'),fullPage:false});
       results.push({page:file,links:'pass',responsive:'360–1920',headings:'pass',schema:'pass'});
     }
     await page.goto(base+'contato.html?perfil=profissional');
@@ -110,7 +121,7 @@ const root = path.resolve(__dirname, '..');
     // Produce social artwork from our authored SVG; this is browser rasterization, not stock imagery.
     await page.setViewportSize({width:1200,height:630});
     await page.goto(base+'assets/og-escalare.svg');
-    await page.screenshot({path:path.join(root,'assets/og-escalare.png')});
+    await page.screenshot({path:path.join(output,'og-escalare.png')});
     assert.deepEqual(errors,[]);
     results.push({test:'application errors',errors});
   } finally {

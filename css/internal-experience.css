@@ -464,8 +464,10 @@
 .coordination-field[data-coordination-state='recognition'] .coordination-fragment { border-color: #75a995; }
 .coordination-field[data-coordination-state='recognition'] .coordination-core { opacity: 0; transform: scale(.9); }
 .coordination-field[data-coordination-state='recognition'] .coordination-lines path { opacity: .25; stroke-dashoffset: 125; }
-.coordination-field[data-coordination-state='related'] .coordination-core { opacity: .72; transform: scale(.95); }
-.coordination-field[data-coordination-state='related'] .coordination-lines path { opacity: .55; stroke-dashoffset: 65; }
+.coordination-field[data-coordination-state='coordination'] .coordination-core { opacity: .72; transform: scale(.95); }
+.coordination-field[data-coordination-state='coordination'] .coordination-lines path { opacity: .55; stroke-dashoffset: 65; }
+.coordination-field[data-coordination-state='continuity'] .coordination-core { opacity: 1; transform: scale(1); }
+.coordination-field[data-coordination-state='continuity'] .coordination-lines path { opacity: .75; stroke-dashoffset: 0; }
 
 .page-institutions .section-white .ruled-list li:nth-child(2) { margin-left: 7%; }
 .page-institutions .section-white .ruled-list li:nth-child(3) { margin-left: 14%; }
@@ -663,6 +665,7 @@
   position: relative;
   padding: 42px;
   border: 1px solid var(--ix-line);
+  overflow: hidden;
   background:
     linear-gradient(90deg, transparent calc(100% - 1px), #e0e8e3 calc(100% - 1px)) 0 0 / 25% 100%,
     #fbfcfa;
@@ -757,6 +760,50 @@
 .legal-toc a:hover { color: var(--ix-green); }
 .page-privacy .legal-copy h2 { scroll-margin-top: 130px; }
 
+/* Full WebGL stories replace the visual diagram only after a scene is ready.
+   The underlying HTML remains available for no-JS, reduced motion and fallback. */
+.coordination-field.has-internal-webgl .coordination-fragment,
+.coordination-field.has-internal-webgl .coordination-core,
+.coordination-field.has-internal-webgl .coordination-lines,
+.composition-board.has-internal-webgl .schedule-grid,
+.professional-route.has-internal-webgl::before,
+.professional-route.has-internal-webgl .route-label,
+.professional-route.has-internal-webgl .route-marker {
+  visibility: hidden;
+  opacity: 0;
+}
+
+.coordination-field.has-internal-webgl .coordination-depth,
+.composition-board.has-internal-webgl .composition-depth,
+.professional-route.has-internal-webgl .professional-depth {
+  opacity: 1;
+}
+
+.coordination-field.has-internal-webgl .coordination-depth {
+  inset: 44px 12px 50px;
+}
+
+.composition-depth {
+  height: clamp(280px, 31vw, 410px);
+  margin-block: 22px;
+}
+
+.composition-board.has-internal-webgl .composition-depth {
+  border-block-color: #abc8bb;
+  background: radial-gradient(circle at 50% 42%, #e7f0ea, #f4f7f3 70%);
+}
+
+.professional-route { min-height: 620px; }
+.professional-route.has-internal-webgl { border-left-color: transparent; }
+.professional-route.has-internal-webgl .professional-depth { inset: -28px -96px -28px -72px; }
+
+.page-institutions .page-hero .hero-split {
+  min-height: max(1800px, 260svh);
+}
+
+.coordination-field { min-height: 540px; }
+.coordination-stage { min-height: 410px; }
+
 @media (max-width: 1100px) {
   .internal-premium .hero-split { grid-template-columns: minmax(0, 1fr) minmax(380px, .85fr); gap: 48px; }
   .composition-story { grid-template-columns: minmax(350px, .85fr) minmax(0, 1.15fr); gap: 50px; }
@@ -775,6 +822,8 @@
 }
 
 @media (max-width: 900px) {
+  .page-institutions .page-hero { overflow: visible; }
+  .page-institutions .page-hero .hero-split { display: block; }
   .internal-premium .hero-split { grid-template-columns: 1fr; }
   .system-map, .coordination-field, .presence-frame { width: min(100%, 650px); margin-inline: auto; }
   .composition-story { grid-template-columns: minmax(300px, .8fr) minmax(0, 1.2fr); gap: 34px; }
@@ -785,8 +834,10 @@
     padding-bottom: 92svh;
   }
   .page-institutions .coordination-field {
-    position: sticky;
-    top: 96px;
+    position: relative;
+    top: auto;
+    margin-top: 56px;
+    transform: translate3d(0, var(--coordination-pin-offset, 0px), 0);
   }
 }
 
@@ -837,7 +888,7 @@
     min-height: 360px;
     margin: 0 0 44px 22px;
   }
-  .professional-depth { inset: 0 -24px 0 -22px; opacity: .76; }
+  .professional-depth { inset: 0 0 0 -22px; opacity: .76; }
   .professional-copy { position: relative; z-index: 2; }
   .professional-copy .ruled-list li { min-height: 54svh; padding-inline: 12px; }
 
@@ -870,7 +921,7 @@
 @media (max-width: 900px) and (max-height: 620px) {
   .page-institutions .page-hero .hero-split { padding-bottom: 100svh; }
   .page-institutions .coordination-field {
-    top: 72px;
+    top: auto;
     min-height: 300px;
   }
   .page-institutions .coordination-stage { min-height: 210px; }
@@ -882,6 +933,30 @@
   .coordination-fragment { font-size: 10px; }
   .coordination-core strong { font-size: 14px; }
   .method-word strong { font-size: 24px; }
+}
+
+@media (max-width: 700px) {
+  .composition-depth { height: clamp(270px, 88vw, 360px); }
+  .composition-board.has-internal-webgl { padding-bottom: 18px; }
+  .composition-board.has-internal-webgl .schedule-grid { min-height: 210px; }
+
+  .professional-route { min-height: 430px; }
+  .professional-route.has-internal-webgl .professional-depth { inset: -18px 0 -18px -22px; }
+
+  .page-institutions .page-hero .hero-split {
+    min-height: 0;
+    padding-bottom: max(1250px, 165svh);
+  }
+  .coordination-field { min-height: 460px; }
+  .coordination-stage { min-height: 360px; }
+  .coordination-field.has-internal-webgl .coordination-depth { inset: 42px -12px 44px; }
+}
+
+@media (max-height: 620px) {
+  .composition-depth { height: 260px; }
+  .professional-route { min-height: 340px; }
+  .coordination-field { min-height: 340px; }
+  .coordination-stage { min-height: 245px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

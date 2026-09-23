@@ -85,7 +85,7 @@ function initCoordinationStory() {
   const renderHost = scene?.querySelector('[data-internal-scene]');
   if (!scene || !story) return;
 
-  const states = ['fragmented', 'recognition', 'related', 'coordinated'];
+  const states = ['fragmented', 'recognition', 'coordination', 'continuity'];
   let start = 0;
   let end = 1;
   const setProgress = progress => {
@@ -101,6 +101,7 @@ function initCoordinationStory() {
   else setProgress(0);
 
   const measure = () => {
+    scene.style.setProperty('--coordination-pin-offset', '0px');
     scene.classList.add('is-measuring');
     const headerHeight = document.querySelector('.site-header')?.offsetHeight || 80;
     const stickyTop = headerHeight + (innerHeight < 620 ? 12 : 28);
@@ -119,10 +120,14 @@ function initCoordinationStory() {
 
   onFrameScroll(() => {
     if (reducedMotion.matches) {
+      scene.style.setProperty('--coordination-pin-offset', '0px');
       setFinal();
       return;
     }
 
+    const pinTravel = Math.max(0, end - start);
+    const pinOffset = innerWidth <= 900 ? clamp(scrollY - start, 0, pinTravel) : 0;
+    scene.style.setProperty('--coordination-pin-offset', `${pinOffset}px`);
     const travel = Math.max(end - start, innerHeight * .82);
     setProgress((scrollY - start) / travel);
   });
@@ -294,6 +299,7 @@ function disposeSceneState(state) {
   const surface = state.surface;
   state.controller = null;
   state.surface = null;
+  state.host?.closest('[data-coordination-field], [data-composition-board], [data-professional-route]')?.classList.remove('has-internal-webgl');
   if (controller) {
     controller.dispose();
   } else if (surface) {
@@ -308,6 +314,7 @@ function useSemanticFallback(host, reason) {
   state.generation++;
   disposeSceneState(state);
   host.classList.remove('has-webgl');
+  host.closest('[data-coordination-field], [data-composition-board], [data-professional-route]')?.classList.remove('has-internal-webgl');
   host.dataset.renderMode = reason;
 }
 
@@ -359,6 +366,7 @@ async function startInternalScene(host, compatibilityOnly = false) {
     }
     controller.update(Number(host.dataset.sceneProgress || 0));
     host.classList.add('has-webgl');
+    host.closest('[data-coordination-field], [data-composition-board], [data-professional-route]')?.classList.add('has-internal-webgl');
     host.dataset.renderMode = surface.compatibility ? 'compatibility' : 'full';
     host.getSceneDiagnostics = () => ({ renderMode: host.dataset.renderMode, ...controller.getDiagnostics() });
   } catch (error) {
@@ -373,6 +381,7 @@ async function startInternalScene(host, compatibilityOnly = false) {
 function initInternalScenes() {
   document.querySelectorAll('[data-internal-scene]').forEach(host => {
     sceneStates.set(host, {
+      host,
       type: host.dataset.internalScene,
       generation: 0,
       surface: null,
@@ -384,7 +393,7 @@ function initInternalScenes() {
 
 function applyReducedState() {
   document.querySelector('[data-system-map]')?.setAttribute('data-scene-state', 'system');
-  document.querySelector('[data-coordination-field]')?.setAttribute('data-coordination-state', 'coordinated');
+  document.querySelector('[data-coordination-field]')?.setAttribute('data-coordination-state', 'continuity');
   document.querySelector('[data-composition-board]')?.setAttribute('data-process-state', 'organized');
   const route = document.querySelector('[data-professional-route]');
   route?.style.setProperty('--route-progress', '92%');

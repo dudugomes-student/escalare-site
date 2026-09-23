@@ -230,9 +230,12 @@ function onVisibility() {
 
 document.addEventListener('visibilitychange', onVisibility);
 const rebuild = () => enhance(false);
+const updateLayoutLabel = () => {
+  story.dataset.layout = compact.matches ? 'compact' : tablet.matches ? 'tablet' : 'wide';
+};
 reducedMotion.addEventListener('change', rebuild);
 compact.addEventListener('change', rebuild);
-tablet.addEventListener('change', rebuild);
+tablet.addEventListener('change', updateLayoutLabel);
 
 window.addEventListener('pagehide', () => {
   disposed = true;

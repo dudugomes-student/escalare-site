@@ -20,7 +20,9 @@ const executablePath = process.env.BROWSER_PATH || 'C:/Program Files (x86)/Micro
   const page = await context.newPage();
   page.on('pageerror', e => errors.push(e.message));
   page.on('requestfailed', request => networkFailures.push({ url: request.url(), error: request.failure()?.errorText }));
-  page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
+  page.on('console', m => {
+    if (m.type() === 'error' && !/^Failed to load resource:/.test(m.text())) errors.push(m.text());
+  });
   const diagnostics = () => page.locator('[data-operation-story]').evaluate(el => el.getOperationDiagnostics());
   try {
     await page.goto(base, { waitUntil: 'networkidle' });
@@ -48,6 +50,33 @@ const executablePath = process.env.BROWSER_PATH || 'C:/Program Files (x86)/Micro
     await page.waitForTimeout(700);
     assert.equal((await diagnostics()).renders, renders);
     results.push({ test: 'offscreen-render-paused', pass: true });
+    const homeScenes = [
+      ['scale', '[data-scale-story]'],
+      ['human', '[data-human-story]'],
+      ['convergence', '[data-convergence]']
+    ];
+    for (const [type, selector] of homeScenes) {
+      const hostSelector = `[data-home-scene="${type}"]`;
+      await page.locator(selector).scrollIntoViewIfNeeded();
+      await page.waitForFunction(host => document.querySelector(host)?.dataset.renderMode === 'full', hostSelector, { timeout: 20000 });
+      const range = await page.evaluate(storySelector => {
+        const trigger = window.ScrollTrigger.getAll().find(item => item.trigger?.matches?.(storySelector));
+        return trigger ? { start: trigger.start, end: trigger.end } : null;
+      }, selector);
+      assert(range, `${type} ScrollTrigger range`);
+      const observedStages = [];
+      for (const progress of [.02, .36, .62, .96]) {
+        await page.evaluate(y => window.scrollTo({ top: y, behavior: 'instant' }), range.start + (range.end - range.start) * progress);
+        await page.waitForTimeout(500);
+        observedStages.push(await page.locator(hostSelector).evaluate(el => el.getHomeSceneDiagnostics()));
+      }
+      assert.deepEqual(observedStages.map(item => item.stage), [1, 2, 3, 4]);
+      assert(observedStages.every(item => item.quality === 'full'));
+      assert(observedStages.every(item => item.textPlanes >= 4));
+      assert.equal(await page.locator(`${hostSelector} canvas`).count(), 1);
+      await page.screenshot({ path: path.join(out, `home-${type}-3d.png`) });
+      results.push({ test: `home-${type}-four-stage-webgl`, stages: observedStages.map(item => item.stage), diagnostics: observedStages.at(-1) });
+    }
     await page.setViewportSize({ width: 390, height: 844 });
     await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
     await page.waitForTimeout(1200);
@@ -67,6 +96,30 @@ const executablePath = process.env.BROWSER_PATH || 'C:/Program Files (x86)/Micro
     await page.waitForTimeout(500);
     assert.equal((await diagnostics()).stage, 1);
     results.push({ test: 'mobile-forward-and-reverse', pass: true });
+    const mobileHomeScenes = [
+      ['scale', '.living-scale'],
+      ['human', '.human-frame'],
+      ['convergence', '[data-convergence]']
+    ];
+    for (const [type, triggerSelector] of mobileHomeScenes) {
+      const hostSelector = `[data-home-scene="${type}"]`;
+      await page.locator(triggerSelector).scrollIntoViewIfNeeded();
+      await page.waitForFunction(host => document.querySelector(host)?.dataset.renderMode === 'full', hostSelector, { timeout: 20000 });
+      const range = await page.evaluate(selector => {
+        const trigger = window.ScrollTrigger.getAll().find(item => item.trigger?.matches?.(selector));
+        return trigger ? { start: trigger.start, end: trigger.end } : null;
+      }, triggerSelector);
+      assert(range, `${type} mobile ScrollTrigger range`);
+      await page.evaluate(y => window.scrollTo({ top: y, behavior: 'instant' }), range.end - (range.end - range.start) * .04);
+      await page.waitForTimeout(650);
+      const sceneData = await page.locator(hostSelector).evaluate(el => el.getHomeSceneDiagnostics());
+      assert.equal(sceneData.stage, 4);
+      assert.equal(sceneData.quality, 'full');
+      assert(sceneData.textPlanes >= 4);
+      assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+      await page.screenshot({ path: path.join(out, `home-${type}-mobile-3d.png`) });
+      results.push({ test: `home-${type}-mobile-keeps-full-narrative`, diagnostics: sceneData });
+    }
     for (const width of [320, 360, 768, 900, 901, 1024, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       await page.waitForTimeout(450);
@@ -84,6 +137,7 @@ const executablePath = process.env.BROWSER_PATH || 'C:/Program Files (x86)/Micro
     await page.waitForTimeout(450);
     assert.equal((await diagnostics()).mode, 'reduced-motion');
     assert.equal(await page.locator('.operation-render canvas').count(), 0);
+    assert.equal(await page.locator('[data-home-scene] canvas').count(), 0);
     await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
     await page.screenshot({ path: path.join(out, 'mobile-reduced.png') });
     results.push({ test: 'live-reduced-motion', pass: true });

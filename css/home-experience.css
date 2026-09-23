@@ -1427,6 +1427,131 @@
   .human-frame-meta { right: 18px; left: 18px; }
 }
 
+/* Full WebGL chapters. Semantic diagrams remain the baseline and are only
+   removed from the visual layer after the corresponding scene is ready. */
+.home-scene-host {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .45s ease;
+}
+
+.home-scene-host canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.home-scene-host.has-webgl { opacity: 1; }
+
+.living-scale {
+  min-height: clamp(500px, 43vw, 660px);
+  isolation: isolate;
+}
+
+.living-scale.has-home-webgl .living-scale-top,
+.living-scale.has-home-webgl .living-scale-board,
+.living-scale.has-home-webgl .living-scale-footer,
+.living-scale.has-home-webgl figcaption,
+.human-frame.has-home-webgl .human-frame-meta,
+.human-frame.has-home-webgl .human-grid,
+.human-frame.has-home-webgl .human-presence,
+.human-frame.has-home-webgl .human-context,
+.human-frame.has-home-webgl figcaption {
+  visibility: hidden;
+  opacity: 0;
+}
+
+.living-scale.has-home-webgl::before,
+.human-frame.has-home-webgl::before,
+.human-frame.has-home-webgl::after { z-index: 5; }
+
+.human-story { padding-block: 0; }
+
+.human-stage,
+.convergence-stage {
+  position: relative;
+  min-height: calc(100svh - 96px);
+}
+
+.human-stage {
+  display: grid;
+  align-items: center;
+  padding-block: clamp(54px, 7svh, 96px);
+}
+
+.human-frame { isolation: isolate; }
+.human-scene { z-index: 2; }
+
+.home-experience .convergence.closing { padding-block: 0; }
+
+.convergence-stage {
+  display: grid;
+  align-items: center;
+  overflow: hidden;
+}
+
+.convergence-stage .convergence-field { z-index: 0; }
+.convergence-stage .convergence-layout { z-index: 4; }
+.convergence-scene { z-index: 2; }
+.convergence.has-home-webgl .convergence-scene { inset: 9% 2% 8% 46%; }
+
+.convergence.has-home-webgl .convergence-field > svg,
+.convergence.has-home-webgl .convergence-cell,
+.convergence.has-home-webgl .convergence-mark {
+  visibility: hidden;
+  opacity: 0;
+}
+
+@media (max-width: 700px) {
+  .home-experience .scale-story.solution-feature {
+    padding-bottom: 100px;
+  }
+
+  .scale-layout { padding-bottom: 28px; }
+
+  .living-scale {
+    position: relative;
+    min-height: clamp(500px, 138vw, 620px);
+    padding: 0;
+  }
+
+  .scale-scene { inset: 0; }
+
+  .human-story {
+    padding: 110px 0 190px;
+  }
+
+  .human-stage { display: block; min-height: 0; padding: 0; }
+  .human-layout { align-items: start; padding-bottom: 0; }
+
+  .human-frame {
+    position: relative;
+    min-height: min(70svh, 620px);
+  }
+
+  .home-experience .convergence.closing { min-height: 100svh; padding: 0; }
+  .convergence-stage { min-height: calc(100svh - 80px); padding-block: 64px 42px; }
+  .convergence-field { opacity: 1; }
+  .convergence.has-home-webgl .convergence-scene { inset: 47% -18% -4%; }
+  .convergence-layout { align-self: stretch !important; align-content: center; }
+  .convergence.has-home-webgl .convergence-copy { max-width: 92%; }
+}
+
+@media (max-height: 650px) {
+  .human-stage,
+  .convergence-stage { min-height: 680px; }
+  .human-stage { padding-block: 42px; }
+  .home-experience .convergence.closing { min-height: 680px; }
+  .convergence-stage { padding-block: 38px; }
+  .convergence-copy h2 { font-size: clamp(38px, 7.2vw, 62px); }
+  .convergence-copy > p:not(.convergence-sequence) { margin-top: 18px; line-height: 1.55; }
+  .convergence-actions { margin-top: 24px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html:has(.home-experience) { scroll-behavior: auto; }
 

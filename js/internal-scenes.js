@@ -46,6 +46,7 @@ export function createInternalScene(host, canvas, context, {
 
   const geometries = new Set();
   const materials = new Set();
+  const textures = new Set();
   const geometry = value => { geometries.add(value); return value; };
   const material = (color, options = {}) => {
     const value = new THREE.MeshStandardMaterial({
@@ -69,6 +70,43 @@ export function createInternalScene(host, canvas, context, {
     parent.add(value);
     return value;
   };
+  const createTextPlane = (text, {
+    width = 2.4,
+    height = .38,
+    color = '#123541',
+    fontSize = 82,
+    weight = 600
+  } = {}) => {
+    const textCanvas = document.createElement('canvas');
+    textCanvas.width = 1024;
+    textCanvas.height = 256;
+    const paint = textCanvas.getContext('2d');
+    paint.clearRect(0, 0, 1024, 256);
+    paint.fillStyle = color;
+    paint.font = `${weight} ${fontSize}px "Plus Jakarta Sans", Inter, sans-serif`;
+    paint.textAlign = 'center';
+    paint.textBaseline = 'middle';
+    paint.fillText(text, 512, 128, 964);
+    const texture = new THREE.CanvasTexture(textCanvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.anisotropy = compatibility ? 1 : 4;
+    textures.add(texture);
+    const surface = new THREE.MeshBasicMaterial({
+      map: texture,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+      depthTest: false,
+      toneMapped: false
+    });
+    materials.add(surface);
+    const plane = new THREE.Mesh(geometry(new THREE.PlaneGeometry(width, height)), surface);
+    plane.renderOrder = 8;
+    plane.userData.textSurface = surface;
+    root.add(plane);
+    return plane;
+  };
+  const faceCamera = (...planes) => planes.forEach(plane => plane?.quaternion.copy(camera.quaternion));
 
   const ink = material(0x123541);
   const green = material(0x23806d);
@@ -82,6 +120,8 @@ export function createInternalScene(host, canvas, context, {
     material,
     lineMaterial,
     addMesh,
+    createTextPlane,
+    faceCamera,
     surfaces: { ink, green, mint, paper, pale }
   });
 
@@ -171,6 +211,8 @@ export function createInternalScene(host, canvas, context, {
         type,
         mode: compatibility ? 'compatibility' : 'full',
         progress,
+        stage: updateScene.getStage?.() || Math.min(4, Math.floor(progress * 4) + 1),
+        textPlanes: updateScene.textPlanes || 0,
         renders,
         drawCalls: renderer.info.render.calls,
         triangles: renderer.info.render.triangles,
@@ -188,6 +230,7 @@ export function createInternalScene(host, canvas, context, {
       updateScene.dispose?.();
       for (const shape of geometries) shape.dispose();
       for (const surface of materials) surface.dispose();
+      for (const texture of textures) texture.dispose();
       renderer.dispose();
       renderer.forceContextLoss();
     }
@@ -200,7 +243,7 @@ function createSceneByType(type, tools) {
   return createProfessionalScene(tools);
 }
 
-function createManagementScene({ root, camera, geometry, lineMaterial, addMesh, surfaces }) {
+function createManagementScene({ root, camera, geometry, lineMaterial, addMesh, createTextPlane, faceCamera, surfaces }) {
   const cellShape = geometry(new THREE.BoxGeometry(1, 1, 1));
   const markerShape = geometry(new THREE.SphereGeometry(1, 14, 10));
   const cells = [];
@@ -238,6 +281,17 @@ function createManagementScene({ root, camera, geometry, lineMaterial, addMesh, 
   const gridSurface = lineMaterial(0x6ca994, { opacity: 0 });
   const grid = new THREE.LineSegments(gridGeometry, gridSurface);
   root.add(grid);
+  const labels = [
+    createTextPlane('COMPLEXIDADE', { width: 2.8, height: .34, color: '#55766d', fontSize: 76 }),
+    createTextPlane('ESTRUTURA', { width: 2.25, height: .34, fontSize: 82 }),
+    createTextPlane('PROFISSIONAIS', { width: 3.2, height: .34, color: '#16715f', fontSize: 74 }),
+    createTextPlane('ESCALA ORGANIZADA', { width: 4.1, height: .4, color: '#123541', fontSize: 76 })
+  ];
+  labels[0].position.set(-2.5, 1.8, .4);
+  labels[1].position.set(2.35, 1.55, -.25);
+  labels[2].position.set(-2.2, 1.15, -1.4);
+  labels[3].position.set(-.4, 1.9, -1.1);
+  let currentStage = 1;
 
   function resize({ compact }) {
     camera.fov = compact ? 41 : 35;
@@ -245,9 +299,10 @@ function createManagementScene({ root, camera, geometry, lineMaterial, addMesh, 
   }
 
   function update(progress) {
-    const assemble = smooth(.08, .82, progress);
-    const populate = smooth(.34, .84, progress);
-    const flatten = smooth(.62, 1, progress);
+    currentStage = Math.min(4, Math.floor(progress * 4) + 1);
+    const assemble = smooth(.08, .58, progress);
+    const populate = smooth(.36, .72, progress);
+    const flatten = smooth(.66, 1, progress);
     cells.forEach((cell, index) => {
       const column = index % columns;
       const row = Math.floor(index / columns);
@@ -258,7 +313,8 @@ function createManagementScene({ root, camera, geometry, lineMaterial, addMesh, 
         mix((index % 4 - 1.5) * .32, 0, assemble),
         mix((index % 2 ? 1 : -1) * .18, 0, assemble)
       );
-      cell.scale.set(mix(.32, .7, assemble), mix(.32, .08, flatten), mix(.32, .52, assemble));
+      const emphasis = index % 6 === 0 ? 1 + populate * .18 : 1;
+      cell.scale.set(mix(.32, .7, assemble) * emphasis, mix(.32, .08, flatten), mix(.32, .52, assemble) * emphasis);
     });
     markers.forEach((marker, index) => {
       const cellIndex = [1, 4, 7, 10, 13, 16, 19][index];
@@ -271,17 +327,22 @@ function createManagementScene({ root, camera, geometry, lineMaterial, addMesh, 
       );
       marker.scale.setScalar(Math.max(.001, smooth(.2, .48, progress) * mix(.11, .085, flatten)));
     });
-    gridSurface.opacity = smooth(.55, .95, progress) * .72;
-    root.rotation.x = mix(-.18, -.58, flatten);
-    root.rotation.y = mix(-.52, -.04, assemble);
-    camera.position.set(mix(0, .2, flatten), mix(4.7, 4.9, flatten), mix(7.5, 4.9, flatten));
-    camera.lookAt(0, 0, 0);
+    gridSurface.opacity = smooth(.55, .9, progress) * .72;
+    labels[0].userData.textSurface.opacity = (1 - smooth(.2, .33, progress)) * .9;
+    labels[1].userData.textSurface.opacity = smooth(.18, .3, progress) * (1 - smooth(.48, .6, progress));
+    labels[2].userData.textSurface.opacity = smooth(.43, .55, progress) * (1 - smooth(.72, .83, progress));
+    labels[3].userData.textSurface.opacity = smooth(.7, .84, progress);
+    root.rotation.x = mix(-.08, -.57, flatten);
+    root.rotation.y = mix(-.68, -.02, assemble);
+    camera.position.set(mix(3.4, .2, flatten), mix(4.1, 3.4, flatten), mix(8.5, 4, assemble));
+    camera.lookAt(0, mix(.35, 0, flatten), 0);
+    faceCamera(...labels);
   }
 
-  return { update, resize };
+  return { update, resize, getStage: () => currentStage, textPlanes: labels.length };
 }
 
-function createInstitutionScene({ root, camera, geometry, lineMaterial, addMesh, surfaces }) {
+function createInstitutionScene({ root, camera, geometry, lineMaterial, addMesh, createTextPlane, faceCamera, surfaces }) {
   const moduleShape = geometry(new THREE.BoxGeometry(1, 1, 1));
   const coreShape = geometry(new THREE.BoxGeometry(1.35, .45, 1.35));
   const moduleSurfaces = [surfaces.pale, surfaces.paper, surfaces.green, surfaces.mint];
@@ -293,6 +354,9 @@ function createInstitutionScene({ root, camera, geometry, lineMaterial, addMesh,
   const connectionSurface = lineMaterial(0x72b39d, { opacity: 0 });
   const connections = new THREE.LineSegments(lineShape, connectionSurface);
   root.add(connections);
+  const continuityRing = addMesh(geometry(new THREE.TorusGeometry(2.35, .025, 8, 80)), surfaces.mint);
+  continuityRing.rotation.x = Math.PI / 2;
+  continuityRing.position.y = -.14;
   const origins = [
     new THREE.Vector3(-3.4, 1.4, 1.8),
     new THREE.Vector3(3.2, -.8, 2.4),
@@ -305,6 +369,12 @@ function createInstitutionScene({ root, camera, geometry, lineMaterial, addMesh,
     new THREE.Vector3(-1.35, 0, -.9),
     new THREE.Vector3(1.35, 0, -.9)
   ];
+  const moduleLabels = ['SETORES', 'PERÍODOS', 'PESSOAS', 'NECESSIDADES'].map(label =>
+    createTextPlane(label, { width: 1.8, height: .3, color: '#123541', fontSize: 72 })
+  );
+  const coreLabel = createTextPlane('OPERAÇÃO COORDENADA', { width: 3.9, height: .4, color: '#16715f', fontSize: 70 });
+  const continuityLabel = createTextPlane('CONTINUIDADE', { width: 3.05, height: .4, color: '#123541', fontSize: 78 });
+  let currentStage = 1;
 
   function resize({ compact }) {
     camera.fov = compact ? 44 : 37;
@@ -312,9 +382,10 @@ function createInstitutionScene({ root, camera, geometry, lineMaterial, addMesh,
   }
 
   function update(progress) {
-    const recognize = smooth(.12, .46, progress);
-    const coordinate = smooth(.34, .82, progress);
-    const continuity = smooth(.72, 1, progress);
+    currentStage = Math.min(4, Math.floor(progress * 4) + 1);
+    const recognize = smooth(.1, .36, progress);
+    const coordinate = smooth(.3, .72, progress);
+    const continuity = smooth(.7, 1, progress);
     modules.forEach((module, index) => {
       module.position.lerpVectors(origins[index], targets[index], coordinate);
       module.rotation.set(
@@ -323,28 +394,38 @@ function createInstitutionScene({ root, camera, geometry, lineMaterial, addMesh,
         mix((index % 2 ? 1 : -1) * .16, 0, coordinate)
       );
       module.scale.set(mix(.62, 1.05, recognize), mix(.72, .2, continuity), mix(.62, .7, coordinate));
+      const label = moduleLabels[index];
+      label.position.set(module.position.x, module.position.y + mix(.72, .42, continuity), module.position.z);
+      label.userData.textSurface.opacity = smooth(.08, .24, progress) * (1 - smooth(.7, .88, progress));
     });
-    core.scale.setScalar(mix(.52, 1, recognize));
-    core.position.y = mix(-.9, .04, recognize);
+    core.scale.setScalar(mix(.001, 1, smooth(.3, .62, progress)));
+    core.position.y = mix(-.9, .04, coordinate);
     core.rotation.y = mix(-.75, 0, coordinate);
-    surfaces.ink.opacity = 1 - smooth(.28, .58, progress);
+    surfaces.ink.opacity = smooth(.3, .58, progress);
     const positions = lineShape.attributes.position;
     modules.forEach((module, index) => {
       positions.setXYZ(index * 2, module.position.x, module.position.y, module.position.z);
       positions.setXYZ(index * 2 + 1, 0, .04, 0);
     });
     positions.needsUpdate = true;
-    connectionSurface.opacity = smooth(.22, .7, progress) * .82;
-    root.rotation.x = mix(-.08, -.46, continuity);
-    root.rotation.y = mix(.22, -.12, coordinate);
-    camera.position.set(mix(.4, 0, coordinate), mix(4.2, 5.3, continuity), mix(8.6, 6.4, coordinate));
-    camera.lookAt(0, 0, 0);
+    connectionSurface.opacity = smooth(.22, .68, progress) * (1 - continuity * .25) * .86;
+    continuityRing.scale.setScalar(Math.max(.001, continuity));
+    continuityRing.rotation.z = mix(-.8, 0, continuity);
+    coreLabel.position.set(0, .72, .15);
+    coreLabel.userData.textSurface.opacity = smooth(.42, .58, progress) * (1 - smooth(.78, .92, progress));
+    continuityLabel.position.set(0, .65, .4);
+    continuityLabel.userData.textSurface.opacity = smooth(.76, .9, progress);
+    root.rotation.x = mix(-.04, -.43, continuity);
+    root.rotation.y = mix(.35, -.1, coordinate);
+    camera.position.set(mix(3.2, .2, coordinate), mix(3.5, 3.3, continuity), mix(9.4, 4, coordinate));
+    camera.lookAt(0, mix(.35, 0, continuity), 0);
+    faceCamera(...moduleLabels, coreLabel, continuityLabel);
   }
 
-  return { update, resize };
+  return { update, resize, getStage: () => currentStage, textPlanes: moduleLabels.length + 2 };
 }
 
-function createProfessionalScene({ root, camera, geometry, material, lineMaterial, addMesh, surfaces }) {
+function createProfessionalScene({ root, camera, geometry, material, lineMaterial, addMesh, createTextPlane, faceCamera, surfaces }) {
   const pointShape = geometry(new THREE.SphereGeometry(1, 12, 8));
   const markerShape = geometry(new THREE.SphereGeometry(1, 20, 14));
   const gateShape = geometry(new THREE.TorusGeometry(.78, .025, 8, 44));
@@ -368,19 +449,32 @@ function createProfessionalScene({ root, camera, geometry, material, lineMateria
   const pathSurface = lineMaterial(0x65aa95, { opacity: .66 });
   const path = new THREE.Line(pathShape, pathSurface);
   root.add(path);
+  const arrivalRing = addMesh(geometry(new THREE.TorusGeometry(1.05, .035, 8, 64)), surfaces.mint);
+  arrivalRing.position.z = -3.08;
+  arrivalRing.rotation.x = Math.PI / 2;
   gates.forEach((gate, index) => {
     gate.position.z = 1.55 - index * 2;
     gate.rotation.x = Math.PI / 2;
   });
   presence.position.z = -3.15;
   presence.visible = false;
+  const labels = [
+    createTextPlane('POSSIBILIDADES', { width: 3.15, height: .38, color: '#55766d', fontSize: 74 }),
+    createTextPlane('SELEÇÃO', { width: 1.95, height: .38, color: '#123541', fontSize: 88 }),
+    createTextPlane('CONTEXTO', { width: 2.35, height: .38, color: '#16715f', fontSize: 82 }),
+    createTextPlane('PRESENÇA', { width: 2.35, height: .42, color: '#123541', fontSize: 88 })
+  ];
+  let compactLayout = false;
+  let currentStage = 1;
 
   function resize({ compact }) {
+    compactLayout = compact;
     camera.fov = compact ? 48 : 40;
     camera.updateProjectionMatrix();
   }
 
   function update(progress) {
+    currentStage = Math.min(4, Math.floor(progress * 4) + 1);
     const select = smooth(.08, .4, progress);
     const contextualize = smooth(.38, .76, progress);
     const arrive = smooth(.72, 1, progress);
@@ -400,14 +494,29 @@ function createProfessionalScene({ root, camera, geometry, material, lineMateria
       const emphasis = 1 - Math.min(1, Math.abs(progress - gateProgress) * 5);
       gate.scale.setScalar(1 + emphasis * .22);
       gate.rotation.z = mix((index - 1) * .22, 0, contextualize);
+      const label = labels[index];
+      label.position.set(gate.position.x, gate.position.y + 1.02, gate.position.z);
+      const center = .14 + index * .24;
+      label.userData.textSurface.opacity = smooth(center - .12, center - .03, progress) * (1 - smooth(center + .14, center + .24, progress));
     });
     presence.visible = progress > .7;
     presence.scale.setScalar(Math.max(.001, arrive));
+    arrivalRing.scale.setScalar(Math.max(.001, arrive));
+    arrivalRing.rotation.z = mix(-.8, 0, arrive);
+    labels[3].position.set(0, 1.1, -3.05);
+    labels[3].userData.textSurface.opacity = smooth(.7, .86, progress);
     pathSurface.opacity = mix(.25, .82, select);
-    root.rotation.y = mix(-.14, .1, contextualize);
-    camera.position.set(mix(0, .15, arrive), mix(1.5, 1.1, contextualize), mix(9.4, 7.7, contextualize));
-    camera.lookAt(0, 0, mix(.4, -.6, progress));
+    root.rotation.y = mix(-.18, .06, contextualize);
+    const currentCamera = curve.getPoint(clamp(progress * .82));
+    const ahead = curve.getPoint(clamp(progress * .82 + .16));
+    camera.position.set(
+      currentCamera.x + mix(compactLayout ? 2.6 : 3.5, compactLayout ? 1.25 : 1.65, arrive),
+      currentCamera.y + mix(compactLayout ? 2.3 : 2.05, 1.45, contextualize),
+      currentCamera.z + mix(compactLayout ? 5.3 : 5.8, compactLayout ? 4.7 : 5, arrive)
+    );
+    camera.lookAt(ahead.x, ahead.y, ahead.z);
+    faceCamera(...labels);
   }
 
-  return { update, resize };
+  return { update, resize, getStage: () => currentStage, textPlanes: labels.length };
 }

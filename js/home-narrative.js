@@ -1,8 +1,4 @@
 const clamp = value => Math.min(1, Math.max(0, value));
-const smooth = (from, to, value) => {
-  const t = clamp((value - from) / (to - from));
-  return t * t * (3 - 2 * t);
-};
 
 const SCALE_STATES = [
   'A necessidade começa em um setor: um lugar dentro da operação.',
@@ -11,20 +7,168 @@ const SCALE_STATES = [
   'Setor, período e profissional formam um contexto.'
 ];
 
+function createWebGL2Surface(compatibilityOnly = false) {
+  const makeCanvas = () => {
+    const canvas = document.createElement('canvas');
+    canvas.setAttribute('aria-hidden', 'true');
+    return canvas;
+  };
+  if (!compatibilityOnly) {
+    const canvas = makeCanvas();
+    try {
+      const context = canvas.getContext('webgl2', {
+        alpha: true,
+        antialias: true,
+        powerPreference: 'high-performance',
+        failIfMajorPerformanceCaveat: true
+      });
+      if (context) return { canvas, context, compatibility: false };
+    } catch {
+      // A compatible WebGL2 configuration is the next capability step.
+    }
+  }
+  const canvas = makeCanvas();
+  try {
+    const context = canvas.getContext('webgl2', {
+      alpha: true,
+      antialias: false,
+      powerPreference: 'default',
+      failIfMajorPerformanceCaveat: false
+    });
+    return context ? { canvas, context, compatibility: true } : null;
+  } catch {
+    return null;
+  }
+}
+
 export function createHomeNarrative({ gsap, ScrollTrigger }) {
   const scaleStory = document.querySelector('[data-scale-story]');
   const scaleStage = scaleStory?.querySelector('.scale-stage');
   const scaleCopy = scaleStory?.querySelector('[data-scale-copy]');
-  const activeCell = scaleStory?.querySelector('.scale-cell.is-active');
   const humanStory = document.querySelector('[data-human-story]');
-  const humanFrame = humanStory?.querySelector('[data-human-frame]');
+  const humanStage = humanStory?.querySelector('.human-stage');
   const convergence = document.querySelector('[data-convergence]');
+  const convergenceStage = convergence?.querySelector('.convergence-stage');
   const header = document.getElementById('siteHeader');
   const animations = [];
+  const sceneStates = new Map();
   const media = gsap.matchMedia();
-  let scaleProgress = 1;
+  let sceneModulePromise;
+  let lazyObserver;
+  let scaleProgress = 0;
   let scaleStageIndex = -1;
   let disposed = false;
+
+  const sceneParent = host => host.closest('.living-scale, .human-frame, [data-convergence]');
+  const setSceneProgress = (host, progress) => {
+    if (!host) return;
+    const value = clamp(progress);
+    host.dataset.sceneProgress = value.toFixed(4);
+    sceneStates.get(host)?.controller?.update(value);
+  };
+  const disposeScene = state => {
+    if (!state) return;
+    const { controller, surface, host } = state;
+    state.controller = null;
+    state.surface = null;
+    host.classList.remove('has-webgl');
+    sceneParent(host)?.classList.remove('has-home-webgl');
+    if (controller) controller.dispose();
+    else if (surface) {
+      surface.canvas.remove();
+      surface.context.getExtension('WEBGL_lose_context')?.loseContext();
+    }
+  };
+  const useSemanticFallback = (state, reason) => {
+    state.generation++;
+    disposeScene(state);
+    state.host.dataset.renderMode = reason;
+  };
+
+  async function startScene(state, compatibilityOnly = false) {
+    if (!state || disposed) return;
+    const ticket = ++state.generation;
+    disposeScene(state);
+    const surface = createWebGL2Surface(compatibilityOnly);
+    if (!surface) {
+      useSemanticFallback(state, 'semantic-fallback');
+      return;
+    }
+    state.surface = surface;
+    state.host.dataset.renderMode = surface.compatibility ? 'compatibility-loading' : 'full-loading';
+    state.host.append(surface.canvas);
+
+    const retryOrFallback = reason => {
+      if (ticket !== state.generation || disposed) return;
+      if (!surface.compatibility) startScene(state, true);
+      else useSemanticFallback(state, `semantic-fallback-${reason}`);
+    };
+    try {
+      sceneModulePromise ||= import('./home-scenes.js');
+      const module = await sceneModulePromise;
+      if (ticket !== state.generation || disposed) {
+        surface.context.getExtension('WEBGL_lose_context')?.loseContext();
+        surface.canvas.remove();
+        return;
+      }
+      const controller = module.createHomeScene(state.host, surface.canvas, surface.context, {
+        type: state.type,
+        compatibility: surface.compatibility,
+        onFailure: retryOrFallback
+      });
+      state.controller = controller;
+      await controller.prepare();
+      if (ticket !== state.generation || disposed) {
+        controller.dispose();
+        return;
+      }
+      controller.update(Number(state.host.dataset.sceneProgress || 0));
+      state.host.classList.add('has-webgl');
+      sceneParent(state.host)?.classList.add('has-home-webgl');
+      state.host.dataset.renderMode = surface.compatibility ? 'compatibility' : 'full';
+      state.host.getHomeSceneDiagnostics = () => ({
+        renderMode: state.host.dataset.renderMode,
+        ...controller.getDiagnostics()
+      });
+    } catch (error) {
+      console.warn('[Escalare home scene] Enhancement failed; preserving the semantic composition.', error);
+      state.controller?.dispose();
+      state.controller = null;
+      surface.canvas.remove();
+      retryOrFallback('initialization');
+    }
+  }
+
+  document.querySelectorAll('[data-home-scene]').forEach(host => {
+    const state = {
+      host,
+      type: host.dataset.homeScene,
+      generation: 0,
+      controller: null,
+      surface: null,
+      started: false
+    };
+    sceneStates.set(host, state);
+  });
+  if ('IntersectionObserver' in window) {
+    lazyObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        const state = sceneStates.get(entry.target);
+        if (!state?.started) {
+          state.started = true;
+          startScene(state);
+        }
+        lazyObserver.unobserve(entry.target);
+      });
+    }, { rootMargin: '600px 0px' });
+    sceneStates.forEach((_, host) => lazyObserver.observe(host));
+  } else {
+    sceneStates.forEach(state => {
+      state.started = true;
+      startScene(state);
+    });
+  }
 
   function setScaleStage(index) {
     if (!scaleStory || index === scaleStageIndex) return;
@@ -38,183 +182,116 @@ export function createHomeNarrative({ gsap, ScrollTrigger }) {
       else chapter.removeAttribute('aria-current');
     });
   }
-
   function setScaleProgress(value) {
     if (!scaleStory || disposed) return;
     scaleProgress = clamp(value);
-    const index = scaleProgress < .24 ? 0 : scaleProgress < .49 ? 1 : scaleProgress < .73 ? 2 : 3;
+    const index = Math.min(3, Math.floor(scaleProgress * 4));
     setScaleStage(index);
-    const relation = smooth(.67, .91, scaleProgress);
-    const growth = smooth(.88, 1, scaleProgress);
-    scaleStory.style.setProperty('--relation-offset', String(1 - relation));
-    scaleStory.style.setProperty('--cell-scale', String(1 + growth * .16));
-    if (activeCell) activeCell.style.setProperty('--cell-lift', `${growth * -4}px`);
+    setSceneProgress(scaleStory.querySelector('[data-home-scene="scale"]'), scaleProgress);
+  }
+  function setHumanProgress(value) {
+    if (!humanStory || disposed) return;
+    const progress = clamp(value);
+    humanStory.dataset.stage = String(Math.min(4, Math.floor(progress * 4) + 1));
+    setSceneProgress(humanStory.querySelector('[data-home-scene="human"]'), progress);
+  }
+  function setConvergenceProgress(value) {
+    if (!convergence || disposed) return;
+    const progress = clamp(value);
+    convergence.dataset.stage = String(Math.min(4, Math.floor(progress * 4) + 1));
+    setSceneProgress(convergence.querySelector('[data-home-scene="convergence"]'), progress);
   }
 
-  if (scaleStory && scaleStage) {
-    scaleStory.classList.add('is-narrative-enhanced');
-    media.add('(min-width: 701px)', () => {
-      const playhead = { progress: 0 };
-      const tween = gsap.to(playhead, {
-        progress: 1,
-        ease: 'none',
-        onUpdate: () => setScaleProgress(playhead.progress),
-        scrollTrigger: {
-          trigger: scaleStory,
-          start: () => `top ${header?.offsetHeight || 0}px`,
-          end: () => `+=${Math.max(innerHeight * 2.35, 1450)}`,
-          pin: scaleStage,
-          pinSpacing: true,
-          scrub: .55,
-          anticipatePin: 1,
-          invalidateOnRefresh: true,
-          onRefresh: () => setScaleProgress(playhead.progress)
-        }
-      });
-      animations.push(tween);
-      setScaleProgress(0);
-      return () => {
-        tween.scrollTrigger?.kill();
-        tween.kill();
-        setScaleProgress(1);
-      };
-    });
-
-    media.add('(max-width: 700px)', () => {
-      const playhead = { progress: 0 };
-      const tween = gsap.to(playhead, {
-        progress: 1,
-        ease: 'none',
-        onUpdate: () => setScaleProgress(playhead.progress),
-        scrollTrigger: {
-          trigger: scaleStory,
-          start: 'top 78%',
-          end: 'bottom 24%',
-          scrub: .38,
-          invalidateOnRefresh: true,
-          onRefresh: () => setScaleProgress(playhead.progress)
-        }
-      });
-      animations.push(tween);
-      setScaleProgress(0);
-      return () => {
-        tween.scrollTrigger?.kill();
-        tween.kill();
-        setScaleProgress(1);
-      };
-    });
-  }
-
-  if (humanStory && humanFrame) {
-    const presence = humanFrame.querySelector('.human-presence');
-    const grid = humanFrame.querySelector('.human-grid');
-    const frameTween = gsap.fromTo(humanFrame,
-      { clipPath: 'inset(28% 31% 28% 31%)' },
-      {
-        clipPath: 'inset(0% 0% 0% 0%)',
-        ease: 'none',
-        scrollTrigger: {
-          trigger: humanStory,
-          start: 'top 88%',
-          end: 'top 18%',
-          scrub: .65,
-          invalidateOnRefresh: true
-        }
+  const addTween = ({ trigger, pin, start, end, scrub, onProgress }) => {
+    if (!trigger) return null;
+    const playhead = { progress: 0 };
+    const tween = gsap.to(playhead, {
+      progress: 1,
+      ease: 'none',
+      onUpdate: () => onProgress(playhead.progress),
+      scrollTrigger: {
+        trigger,
+        pin: pin || false,
+        start,
+        end,
+        scrub,
+        anticipatePin: pin ? 1 : 0,
+        invalidateOnRefresh: true,
+        onRefresh: () => onProgress(playhead.progress)
       }
-    );
-    animations.push(frameTween);
-
-    if (presence) {
-      const presenceTween = gsap.fromTo(presence,
-        { scale: .22, transformOrigin: '50% 52%' },
-        {
-          scale: 1,
-          ease: 'none',
-          scrollTrigger: {
-            trigger: humanStory,
-            start: 'top 86%',
-            end: 'top 24%',
-            scrub: .65
-          }
-        }
-      );
-      animations.push(presenceTween);
-    }
-
-    if (grid) {
-      const gridTween = gsap.fromTo(grid,
-        { scale: 1.22, opacity: .8, transformOrigin: '50% 50%' },
-        {
-          scale: 1,
-          opacity: .45,
-          ease: 'none',
-          scrollTrigger: {
-            trigger: humanStory,
-            start: 'top 88%',
-            end: 'top 20%',
-            scrub: .65
-          }
-        }
-      );
-      animations.push(gridTween);
-    }
-  }
-
-  if (convergence) {
-    const cells = [...convergence.querySelectorAll('.convergence-cell')];
-    const field = convergence.querySelector('.convergence-field');
-    const origins = [
-      { xPercent: -65, yPercent: -45 },
-      { xPercent: 48, yPercent: -70 },
-      { xPercent: -82, yPercent: 58 },
-      { xPercent: 68, yPercent: 46 },
-      { xPercent: 26, yPercent: -95 }
-    ];
-    cells.forEach((cell, index) => {
-      const tween = gsap.fromTo(cell,
-        { ...origins[index], opacity: index === 4 ? .2 : .42 },
-        {
-          xPercent: 0,
-          yPercent: 0,
-          opacity: index === 4 ? .45 : 1,
-          ease: 'none',
-          scrollTrigger: {
-            trigger: convergence,
-            start: 'top 92%',
-            end: 'top 22%',
-            scrub: .75
-          }
-        }
-      );
-      animations.push(tween);
     });
+    animations.push(tween);
+    onProgress(0);
+    return tween;
+  };
 
-    if (field) {
-      const fieldTween = gsap.fromTo(field,
-        { opacity: 1 },
-        {
-          opacity: .75,
-          ease: 'none',
-          scrollTrigger: {
-            trigger: convergence,
-            start: 'top 92%',
-            end: 'top 18%',
-            scrub: .75
-          }
-        }
-      );
-      animations.push(fieldTween);
-    }
-  }
+  media.add('(min-width: 701px)', () => {
+    addTween({
+      trigger: scaleStory,
+      pin: scaleStage,
+      start: () => `top ${header?.offsetHeight || 0}px`,
+      end: () => `+=${Math.max(innerHeight * 2.7, 1800)}`,
+      scrub: .58,
+      onProgress: setScaleProgress
+    });
+    addTween({
+      trigger: humanStory,
+      pin: humanStage,
+      start: () => `top ${header?.offsetHeight || 0}px`,
+      end: () => `+=${Math.max(innerHeight * 2.15, 1450)}`,
+      scrub: .62,
+      onProgress: setHumanProgress
+    });
+    addTween({
+      trigger: convergence,
+      pin: convergenceStage,
+      start: () => `top ${header?.offsetHeight || 0}px`,
+      end: () => `+=${Math.max(innerHeight * 2.1, 1400)}`,
+      scrub: .66,
+      onProgress: setConvergenceProgress
+    });
+  });
+
+  media.add('(max-width: 700px)', () => {
+    const canPinCompactScene = matchMedia('(min-height: 651px)').matches;
+    const compactStart = () => canPinCompactScene
+      ? `top ${header?.offsetHeight || 0}px`
+      : 'top 78%';
+
+    addTween({
+      trigger: scaleStory?.querySelector('.living-scale'),
+      pin: canPinCompactScene ? scaleStory?.querySelector('.living-scale') : false,
+      start: compactStart,
+      end: () => `+=${Math.max(innerHeight * 1.85, 1050)}`,
+      scrub: .42,
+      onProgress: setScaleProgress
+    });
+    addTween({
+      trigger: humanStory?.querySelector('.human-frame'),
+      pin: canPinCompactScene ? humanStory?.querySelector('.human-frame') : false,
+      start: compactStart,
+      end: () => `+=${Math.max(innerHeight * 1.75, 980)}`,
+      scrub: .44,
+      onProgress: setHumanProgress
+    });
+    addTween({
+      trigger: convergence,
+      pin: canPinCompactScene ? convergenceStage : false,
+      start: () => canPinCompactScene ? `top ${header?.offsetHeight || 0}px` : 'top 82%',
+      end: () => `+=${Math.max(innerHeight * 1.8, 920)}`,
+      scrub: .48,
+      onProgress: setConvergenceProgress
+    });
+  });
 
   ScrollTrigger.refresh();
 
   if (scaleStory) {
+    scaleStory.classList.add('is-narrative-enhanced');
     scaleStory.getScaleDiagnostics = () => ({
       stage: scaleStageIndex + 1,
       progress: scaleProgress,
-      pinned: matchMedia('(min-width: 701px)').matches,
-      mode: matchMedia('(min-width: 701px)').matches ? 'pinned' : 'responsive-scroll'
+      mode: matchMedia('(min-width: 701px)').matches ? 'pinned-webgl' : 'responsive-webgl'
     });
   }
 
@@ -222,25 +299,21 @@ export function createHomeNarrative({ gsap, ScrollTrigger }) {
     dispose() {
       if (disposed) return;
       disposed = true;
+      lazyObserver?.disconnect();
       media.revert();
       animations.forEach(animation => {
         animation.scrollTrigger?.kill();
         animation.kill();
       });
+      sceneStates.forEach(state => disposeScene(state));
+      sceneStates.clear();
       if (scaleStory) {
         scaleStory.classList.remove('is-narrative-enhanced');
         scaleStory.dataset.stage = '4';
-        scaleStory.style.removeProperty('--relation-offset');
-        scaleStory.style.removeProperty('--cell-scale');
         delete scaleStory.getScaleDiagnostics;
       }
-      activeCell?.style.removeProperty('--cell-lift');
-      const humanElements = [humanFrame, humanFrame?.querySelector('.human-presence'), humanFrame?.querySelector('.human-grid')].filter(Boolean);
-      if (humanElements.length) gsap.set(humanElements, { clearProps: 'all' });
-      const convergenceCells = convergence ? convergence.querySelectorAll('.convergence-cell') : [];
-      if (convergenceCells.length) gsap.set(convergenceCells, { clearProps: 'all' });
-      const convergenceField = convergence?.querySelector('.convergence-field');
-      if (convergenceField) gsap.set(convergenceField, { clearProps: 'all' });
+      if (humanStory) humanStory.dataset.stage = '4';
+      if (convergence) convergence.dataset.stage = '4';
     }
   };
 }
