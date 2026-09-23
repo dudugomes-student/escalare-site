@@ -5,12 +5,12 @@ const smooth = (a, b, value) => { const t = THREE.MathUtils.clamp((value - a) / 
 
 // One persistent set of rooms: floors become cells, walls become dividers,
 // and each professional becomes an assignment inside the very same cell.
-export function createOperationScene(host, canvas, context, { mobile, tablet = false, simplified = false, onFailure }) {
-  const renderer = new THREE.WebGLRenderer({ canvas, context, alpha: true, antialias: true, powerPreference: 'low-power' });
+export function createOperationScene(host, canvas, context, { mobile, compatibility = false, onFailure }) {
+  const renderer = new THREE.WebGLRenderer({ canvas, context, alpha: true, antialias: !compatibility, powerPreference: compatibility ? 'default' : 'high-performance' });
   renderer.setClearColor(0x000000, 0);
-  const quality = simplified ? 'simplified' : mobile ? 'mobile' : tablet ? 'tablet' : 'desktop';
-  const shadows = !mobile && !tablet && !simplified;
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, simplified ? 1 : mobile ? 1.25 : tablet ? 1.35 : 1.6));
+  const quality = compatibility ? 'compatibility' : 'full';
+  const shadows = !compatibility;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, compatibility ? 1 : 1.6));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.25;
@@ -45,7 +45,7 @@ export function createOperationScene(host, canvas, context, { mobile, tablet = f
   const glass = material(0x658b89, { roughness: .38, metalness: .12 });
   const green = material(0x248770);
   const roofMat = material(0xf5f6ee, { transparent: true });
-  const rows = mobile ? 2 : 3;
+  const rows = 3;
   const count = rows * 4;
   const mesh = (g, m, amount) => { const obj = new THREE.InstancedMesh(g, m, amount); obj.instanceMatrix.setUsage(THREE.DynamicDrawUsage); obj.castShadow = shadows; obj.receiveShadow = shadows; obj.frustumCulled = false; rig.add(obj); return obj; };
   const floors = mesh(box, white, count);
@@ -102,7 +102,6 @@ export function createOperationScene(host, canvas, context, { mobile, tablet = f
   let pendingCompile = null;
   let frame = 0;
   let slowFrames = 0;
-  let reducedQuality = false;
   let renders = 0;
   const gaze = new THREE.Vector3();
 
@@ -161,7 +160,7 @@ export function createOperationScene(host, canvas, context, { mobile, tablet = f
     set(routes, 2, 2.05, .025, 0, mix(.15, .02, grid), .012, rows * 1.75);
     for (const obj of instances) obj.instanceMatrix.needsUpdate = true;
     const approach = Math.sin(smooth(0, .75, value) * Math.PI);
-    const distance = mobile ? 1.14 : 1;
+    const distance = mobile ? 1.22 : 1;
     camera.position.set(mix(10.6 - approach * 2.2, .35, grid) * distance, mix(9 + approach * .8, 15.4, grid) * distance, mix(12.3 - approach * 2.8, 2.9, grid) * distance);
     gaze.set(mix(-.28 * approach, 0, grid), mix(.28 + approach * .15, 0, grid), 0);
     camera.lookAt(gaze);
@@ -172,13 +171,11 @@ export function createOperationScene(host, canvas, context, { mobile, tablet = f
     frame = 0;
     if (disposed || !ready || !visible || document.hidden) return;
     const before = performance.now();
-    try { renderer.render(scene, camera); } catch { onFailure(); return; }
+    try { renderer.render(scene, camera); } catch { onFailure('render-error'); return; }
     const cost = performance.now() - before;
-    // Conservative degradation after repeated slow rendering, never device sniffing alone.
+    // Sustained measured render cost is evidence for retrying in compatibility mode.
     if (renders++ > 8 && cost > 38) slowFrames++; else slowFrames = Math.max(0, slowFrames - 1);
-    if (slowFrames > 8 && !reducedQuality) {
-      renderer.setPixelRatio(1); renderer.shadowMap.enabled = false; reducedQuality = true; slowFrames = 0;
-    } else if (slowFrames > 16 && reducedQuality) { onFailure(); }
+    if (slowFrames > 8) onFailure('sustained-slow-rendering');
   }
   function requestRender() { if (!frame && ready && !disposed && visible && !document.hidden) frame = requestAnimationFrame(render); }
   function resize() {
@@ -206,7 +203,7 @@ export function createOperationScene(host, canvas, context, { mobile, tablet = f
     update,
     setVisible(value) { visible = value; if (value) requestRender(); else { cancelAnimationFrame(frame); frame = 0; } },
     renderNow() { cancelAnimationFrame(frame); render(); },
-    getDiagnostics() { return { renders, drawCalls: renderer.info.render.calls, triangles: renderer.info.render.triangles, pixelRatio: renderer.getPixelRatio(), progress, reducedQuality, quality }; },
+    getDiagnostics() { return { renders, drawCalls: renderer.info.render.calls, triangles: renderer.info.render.triangles, pixelRatio: renderer.getPixelRatio(), progress, quality }; },
     dispose() {
       if (disposed) return;
       disposed = true; cancelAnimationFrame(frame); resizeObserver.disconnect();

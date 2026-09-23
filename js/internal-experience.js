@@ -1,6 +1,7 @@
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
-const wideViewport = matchMedia('(min-width: 701px)');
 const cleanups = [];
+const sceneStates = new Map();
+let sceneModulePromise;
 
 const clamp = (value, min = 0, max = 1) => Math.min(max, Math.max(min, value));
 
@@ -38,31 +39,105 @@ function observeOnce(element, activeClass) {
   cleanups.push(() => observer.disconnect());
 }
 
+function sceneProgress(element) {
+  const rect = element.getBoundingClientRect();
+  const travel = Math.max(innerHeight * .82, rect.height * .92);
+  return clamp((innerHeight * .82 - rect.top) / travel);
+}
+
+function setInternalSceneProgress(host, progress) {
+  if (!host) return;
+  const value = clamp(progress);
+  host.dataset.sceneProgress = value.toFixed(4);
+  sceneStates.get(host)?.controller?.update(value);
+}
+
 function initSteppedHero(selector, datasetKey, states) {
   const scene = document.querySelector(selector);
   if (!scene) return;
-  const setFinal = () => { scene.dataset[datasetKey] = states.at(-1); };
-  if (reducedMotion.matches || !wideViewport.matches) {
+  const renderHost = scene.querySelector('[data-internal-scene]');
+  const setFinal = () => {
+    scene.dataset[datasetKey] = states.at(-1);
+    scene.style.setProperty('--scene-progress', '1');
+    setInternalSceneProgress(renderHost, 1);
+  };
+  if (reducedMotion.matches) {
     setFinal();
-    return;
+  } else {
+    scene.dataset[datasetKey] = states[0];
   }
-  scene.dataset[datasetKey] = states[0];
   onFrameScroll(() => {
-    const rect = scene.getBoundingClientRect();
-    const distance = Math.max(rect.height * .78, innerHeight * .56);
-    const progress = clamp((96 - rect.top) / distance);
+    if (reducedMotion.matches) {
+      setFinal();
+      return;
+    }
+    const progress = sceneProgress(scene);
     const index = Math.min(states.length - 1, Math.floor(progress * states.length));
     scene.dataset[datasetKey] = states[index];
+    scene.style.setProperty('--scene-progress', String(progress));
+    setInternalSceneProgress(renderHost, progress);
+  });
+}
+
+function initCoordinationStory() {
+  const scene = document.querySelector('[data-coordination-field]');
+  const story = scene?.closest('.page-hero');
+  const renderHost = scene?.querySelector('[data-internal-scene]');
+  if (!scene || !story) return;
+
+  const states = ['fragmented', 'recognition', 'related', 'coordinated'];
+  let start = 0;
+  let end = 1;
+  const setProgress = progress => {
+    const value = clamp(progress);
+    const index = Math.min(states.length - 1, Math.floor(value * states.length));
+    scene.dataset.coordinationState = states[index];
+    scene.style.setProperty('--scene-progress', String(value));
+    setInternalSceneProgress(renderHost, value);
+  };
+
+  const setFinal = () => setProgress(1);
+  if (reducedMotion.matches) setFinal();
+  else setProgress(0);
+
+  const measure = () => {
+    scene.classList.add('is-measuring');
+    const headerHeight = document.querySelector('.site-header')?.offsetHeight || 80;
+    const stickyTop = headerHeight + (innerHeight < 620 ? 12 : 28);
+    const sceneTop = scrollY + scene.getBoundingClientRect().top;
+    const storyTop = scrollY + story.getBoundingClientRect().top;
+    start = sceneTop - stickyTop;
+    end = storyTop + story.offsetHeight - scene.offsetHeight - stickyTop;
+    scene.classList.remove('is-measuring');
+  };
+
+  measure();
+  const onResize = () => measure();
+  addEventListener('resize', onResize, { passive: true });
+  cleanups.push(() => removeEventListener('resize', onResize));
+  document.fonts?.ready.then(measure);
+
+  onFrameScroll(() => {
+    if (reducedMotion.matches) {
+      setFinal();
+      return;
+    }
+
+    const travel = Math.max(end - start, innerHeight * .82);
+    setProgress((scrollY - start) / travel);
   });
 }
 
 function initCompositionStory() {
+  const story = document.querySelector('.composition-story');
   const board = document.querySelector('[data-composition-board]');
   const steps = [...document.querySelectorAll('[data-composition-step]')];
-  if (!board || !steps.length) return;
+  if (!story || !board || !steps.length) return;
 
   const controls = board.querySelector('[data-process-controls]');
   const note = board.querySelector('[data-process-note]');
+  const renderHost = board.querySelector('[data-internal-scene]');
+  const states = steps.map(step => step.dataset.compositionStep);
   const messages = {
     demand: 'Os períodos revelam o espaço que o planejamento precisa organizar.',
     context: 'Setores e necessidades dão contexto à estrutura temporal.',
@@ -84,24 +159,38 @@ function initCompositionStory() {
   if (controls) {
     controls.hidden = false;
     controls.querySelectorAll('button').forEach(button => {
-      button.addEventListener('click', () => setState(button.dataset.process, true));
+      const onClick = () => {
+        const state = button.dataset.process;
+        setState(state, true);
+        setInternalSceneProgress(renderHost, states.indexOf(state) / (states.length - 1));
+      };
+      button.addEventListener('click', onClick);
+      cleanups.push(() => button.removeEventListener('click', onClick));
     });
   }
 
-  if (reducedMotion.matches || !wideViewport.matches || !('IntersectionObserver' in window)) {
-    setState('organized');
-    return;
+  const setFinal = () => {
+    setState(states.at(-1));
+    board.style.setProperty('--process-progress', '1');
+    setInternalSceneProgress(renderHost, 1);
+  };
+  if (reducedMotion.matches) {
+    setFinal();
   }
 
-  setState(steps[0].dataset.compositionStep);
-  const observer = new IntersectionObserver(entries => {
-    const current = entries
-      .filter(entry => entry.isIntersecting)
-      .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-    if (current) setState(current.target.dataset.compositionStep);
-  }, { threshold: [.25, .5, .72], rootMargin: '-22% 0px -34%' });
-  steps.forEach(step => observer.observe(step));
-  cleanups.push(() => observer.disconnect());
+  onFrameScroll(() => {
+    if (reducedMotion.matches) {
+      setFinal();
+      return;
+    }
+    const rect = story.getBoundingClientRect();
+    const travel = Math.max(story.offsetHeight - innerHeight * .18, innerHeight * 1.15);
+    const progress = clamp((innerHeight * .7 - rect.top) / travel);
+    const index = Math.min(states.length - 1, Math.floor(progress * states.length));
+    setState(states[index]);
+    board.style.setProperty('--process-progress', String(progress));
+    setInternalSceneProgress(renderHost, progress);
+  });
 }
 
 function initProfessionalRoute() {
@@ -109,47 +198,233 @@ function initProfessionalRoute() {
   if (!story) return;
   const route = story.querySelector('[data-professional-route]');
   const steps = [...story.querySelectorAll('[data-route-step]')];
+  const renderHost = route?.querySelector('[data-internal-scene]');
   if (!route || !steps.length) return;
 
   const setProgress = progress => {
-    const position = 8 + progress * 84;
+    const value = clamp(progress);
+    const position = 8 + value * 84;
     route.style.setProperty('--route-progress', `${position}%`);
-    const active = Math.min(steps.length - 1, Math.floor(progress * steps.length));
+    route.style.setProperty('--journey-progress', String(value));
+    const active = Math.min(steps.length - 1, Math.floor(value * steps.length));
     steps.forEach((step, index) => step.classList.toggle('is-current', index === active));
+    route.dataset.journeyStage = String(Math.min(4, Math.floor(value * 4) + 1));
+    setInternalSceneProgress(renderHost, value);
   };
 
-  if (reducedMotion.matches || !wideViewport.matches) {
+  if (reducedMotion.matches) {
     setProgress(1);
     steps.forEach(step => step.classList.remove('is-current'));
-    return;
   }
 
   onFrameScroll(() => {
+    if (reducedMotion.matches) {
+      setProgress(1);
+      return;
+    }
     const rect = story.getBoundingClientRect();
     const travel = Math.max(rect.height - innerHeight * .18, innerHeight * .75);
-    setProgress(clamp((innerHeight * .7 - rect.top) / travel));
+    setProgress(clamp((innerHeight * .72 - rect.top) / travel));
+  });
+}
+
+function initMethodStory() {
+  const method = document.querySelector('[data-method-composition]');
+  if (!method) return;
+  const setProgress = progress => {
+    const value = clamp(progress);
+    const stage = Math.min(4, Math.floor(value * 4) + 1);
+    method.dataset.methodStage = String(stage);
+    method.style.setProperty('--method-progress', String(value));
+    method.classList.toggle('is-resolved', stage === 4);
+  };
+  if (reducedMotion.matches) {
+    setProgress(1);
+  }
+  onFrameScroll(() => {
+    if (reducedMotion.matches) {
+      setProgress(1);
+      return;
+    }
+    setProgress(sceneProgress(method));
   });
 }
 
 function initEditorialIndex() {
   const shelf = document.querySelector('[data-editorial-shelf]');
-  if (!shelf) return;
-  observeOnce(shelf, 'is-indexed');
+  if (shelf) observeOnce(shelf, 'is-indexed');
+}
+
+function createWebGL2Surface(compatibilityOnly = false) {
+  const makeCanvas = () => {
+    const canvas = document.createElement('canvas');
+    canvas.setAttribute('aria-hidden', 'true');
+    return canvas;
+  };
+  if (!compatibilityOnly) {
+    const canvas = makeCanvas();
+    try {
+      const context = canvas.getContext('webgl2', {
+        alpha: true,
+        antialias: true,
+        powerPreference: 'high-performance',
+        failIfMajorPerformanceCaveat: true
+      });
+      if (context) return { canvas, context, compatibility: false };
+    } catch {
+      // The compatible WebGL2 configuration below is the next capability step.
+    }
+  }
+  const canvas = makeCanvas();
+  try {
+    const context = canvas.getContext('webgl2', {
+      alpha: true,
+      antialias: false,
+      powerPreference: 'default',
+      failIfMajorPerformanceCaveat: false
+    });
+    return context ? { canvas, context, compatibility: true } : null;
+  } catch {
+    return null;
+  }
+}
+
+function disposeSceneState(state) {
+  const controller = state.controller;
+  const surface = state.surface;
+  state.controller = null;
+  state.surface = null;
+  if (controller) {
+    controller.dispose();
+  } else if (surface) {
+    surface.canvas.remove();
+    surface.context.getExtension('WEBGL_lose_context')?.loseContext();
+  }
+}
+
+function useSemanticFallback(host, reason) {
+  const state = sceneStates.get(host);
+  if (!state) return;
+  state.generation++;
+  disposeSceneState(state);
+  host.classList.remove('has-webgl');
+  host.dataset.renderMode = reason;
+}
+
+async function startInternalScene(host, compatibilityOnly = false) {
+  const state = sceneStates.get(host);
+  if (!state) return;
+  const ticket = ++state.generation;
+  disposeSceneState(state);
+  host.classList.remove('has-webgl');
+
+  if (reducedMotion.matches) {
+    host.dataset.renderMode = 'reduced-motion';
+    return;
+  }
+
+  const surface = createWebGL2Surface(compatibilityOnly);
+  if (!surface) {
+    useSemanticFallback(host, 'semantic-fallback');
+    return;
+  }
+  state.surface = surface;
+  host.dataset.renderMode = surface.compatibility ? 'compatibility-loading' : 'full-loading';
+  host.append(surface.canvas);
+
+  const retryOrFallback = reason => {
+    if (ticket !== state.generation) return;
+    if (!surface.compatibility) startInternalScene(host, true);
+    else useSemanticFallback(host, `semantic-fallback-${reason}`);
+  };
+
+  try {
+    sceneModulePromise ||= import('./internal-scenes.js');
+    const module = await sceneModulePromise;
+    if (ticket !== state.generation) {
+      surface.context.getExtension('WEBGL_lose_context')?.loseContext();
+      surface.canvas.remove();
+      return;
+    }
+    const controller = module.createInternalScene(host, surface.canvas, surface.context, {
+      type: state.type,
+      compatibility: surface.compatibility,
+      onFailure: retryOrFallback
+    });
+    state.controller = controller;
+    await controller.prepare();
+    if (ticket !== state.generation) {
+      controller.dispose();
+      return;
+    }
+    controller.update(Number(host.dataset.sceneProgress || 0));
+    host.classList.add('has-webgl');
+    host.dataset.renderMode = surface.compatibility ? 'compatibility' : 'full';
+    host.getSceneDiagnostics = () => ({ renderMode: host.dataset.renderMode, ...controller.getDiagnostics() });
+  } catch (error) {
+    console.warn('[Escalare internal scene] Enhancement failed; preserving the semantic scene.', error);
+    state.controller?.dispose();
+    state.controller = null;
+    surface.canvas.remove();
+    retryOrFallback('initialization');
+  }
+}
+
+function initInternalScenes() {
+  document.querySelectorAll('[data-internal-scene]').forEach(host => {
+    sceneStates.set(host, {
+      type: host.dataset.internalScene,
+      generation: 0,
+      surface: null,
+      controller: null
+    });
+    startInternalScene(host);
+  });
+}
+
+function applyReducedState() {
+  document.querySelector('[data-system-map]')?.setAttribute('data-scene-state', 'system');
+  document.querySelector('[data-coordination-field]')?.setAttribute('data-coordination-state', 'coordinated');
+  document.querySelector('[data-composition-board]')?.setAttribute('data-process-state', 'organized');
+  const route = document.querySelector('[data-professional-route]');
+  route?.style.setProperty('--route-progress', '92%');
+  const method = document.querySelector('[data-method-composition]');
+  if (method) {
+    method.dataset.methodStage = '4';
+    method.classList.add('is-resolved');
+  }
+  document.querySelector('[data-editorial-shelf]')?.classList.add('is-indexed');
+  document.querySelector('[data-contact-connection]')?.classList.add('is-connected');
 }
 
 function initExperience() {
-  initSteppedHero('[data-system-map]', 'sceneState', ['parts', 'relations', 'system']);
-  initSteppedHero('[data-coordination-field]', 'coordinationState', ['fragmented', 'related', 'coordinated']);
+  initSteppedHero('[data-system-map]', 'sceneState', ['parts', 'proximity', 'relations', 'system']);
+  initCoordinationStory();
   initCompositionStory();
   initProfessionalRoute();
-  observeOnce(document.querySelector('[data-method-composition]'), 'is-resolved');
+  initMethodStory();
   observeOnce(document.querySelector('[data-contact-connection]'), 'is-connected');
   initEditorialIndex();
   document.documentElement.classList.add('internal-experience-ready');
+  requestAnimationFrame(() => requestAnimationFrame(initInternalScenes));
 }
 
+const onPreferenceChange = () => {
+  if (reducedMotion.matches) {
+    applyReducedState();
+    sceneStates.forEach((_, host) => useSemanticFallback(host, 'reduced-motion'));
+  } else {
+    sceneStates.forEach((_, host) => startInternalScene(host));
+    dispatchEvent(new Event('resize'));
+  }
+};
+
 initExperience();
+reducedMotion.addEventListener('change', onPreferenceChange);
+cleanups.push(() => reducedMotion.removeEventListener('change', onPreferenceChange));
 
 addEventListener('pagehide', () => {
   cleanups.splice(0).forEach(cleanup => cleanup());
+  sceneStates.forEach(state => disposeSceneState(state));
+  sceneStates.clear();
 }, { once: true });

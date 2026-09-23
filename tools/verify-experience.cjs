@@ -51,7 +51,8 @@ const executablePath = process.env.BROWSER_PATH || 'C:/Program Files (x86)/Micro
     await page.setViewportSize({ width: 390, height: 844 });
     await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
     await page.waitForTimeout(1200);
-    assert.equal((await diagnostics()).mode, 'mobile-webgl');
+    assert.equal((await diagnostics()).mode, 'full-webgl');
+    assert.equal((await diagnostics()).quality, 'full');
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     await page.screenshot({ path: path.join(out, 'mobile-01.png'), fullPage: false });
     await page.evaluate(() => window.scrollTo({ top: 380, behavior: 'instant' }));
@@ -74,7 +75,7 @@ const executablePath = process.env.BROWSER_PATH || 'C:/Program Files (x86)/Micro
     results.push({ test: 'responsive-widths-320-through-1440', pass: true });
     await page.setViewportSize({ width: 1200, height: 520 });
     await page.waitForTimeout(600);
-    assert.equal((await diagnostics()).mode, 'desktop-webgl');
+    assert.equal((await diagnostics()).mode, 'full-webgl');
     assert.equal(await page.locator('.operation-render canvas').count(), 1);
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     results.push({ test: 'low-height-keeps-webgl', ...await diagnostics() });
@@ -89,11 +90,11 @@ const executablePath = process.env.BROWSER_PATH || 'C:/Program Files (x86)/Micro
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.waitForTimeout(1000);
-    assert.equal((await diagnostics()).mode, 'desktop-webgl');
+    assert.equal((await diagnostics()).mode, 'full-webgl');
     await page.locator('.operation-render canvas').evaluate(canvas => canvas.getContext('webgl2').getExtension('WEBGL_lose_context').loseContext());
-    await page.waitForTimeout(400);
-    assert.equal((await diagnostics()).mode, 'render-fallback');
-    results.push({ test: 'context-loss-fallback', pass: true });
+    await page.waitForFunction(() => document.querySelector('[data-operation-story]').dataset.mode === 'compatibility-webgl');
+    assert.equal((await diagnostics()).quality, 'compatibility');
+    results.push({ test: 'context-loss-retries-compatibility', pass: true });
     await page.screenshot({ path: path.join(out, 'desktop-fallback.png') });
     const staticContext = await browser.newContext({ viewport: { width: 390, height: 844 } });
     await staticContext.addInitScript(() => { const get = HTMLCanvasElement.prototype.getContext; HTMLCanvasElement.prototype.getContext = function(type, ...rest) { return type === 'webgl2' ? null : get.call(this, type, ...rest); }; });
@@ -101,10 +102,10 @@ const executablePath = process.env.BROWSER_PATH || 'C:/Program Files (x86)/Micro
     const requests = [];
     fallback.on('request', req => requests.push(req.url()));
     await fallback.goto(base, { waitUntil: 'networkidle' });
-    assert.equal(await fallback.locator('[data-operation-story]').getAttribute('data-mode'), 'no-webgl');
-    assert(!requests.some(url => /vendor\//.test(url)));
+    assert.equal(await fallback.locator('[data-operation-story]').getAttribute('data-mode'), 'semantic-fallback');
+    assert(requests.some(url => /vendor\/(gsap|ScrollTrigger)/.test(url)));
     assert(await fallback.locator('.operation-cta').isVisible());
-    results.push({ test: 'no-webgl-no-vendor-downloads', pass: true });
+    results.push({ test: 'no-webgl-keeps-dom-gsap-narrative', pass: true });
     const compatibilityContext = await browser.newContext({ viewport: { width: 1200, height: 520 } });
     await compatibilityContext.addInitScript(() => {
       const get = HTMLCanvasElement.prototype.getContext;
@@ -115,11 +116,11 @@ const executablePath = process.env.BROWSER_PATH || 'C:/Program Files (x86)/Micro
     });
     const compatibilityPage = await compatibilityContext.newPage();
     await compatibilityPage.goto(base, { waitUntil: 'networkidle' });
-    await compatibilityPage.waitForFunction(() => document.querySelector('[data-operation-story]').dataset.mode === 'desktop-webgl');
+    await compatibilityPage.waitForFunction(() => document.querySelector('[data-operation-story]').dataset.mode === 'compatibility-webgl');
     const compatibilityDiagnostics = await compatibilityPage.locator('[data-operation-story]').evaluate(el => el.getOperationDiagnostics());
-    assert.equal(compatibilityDiagnostics.quality, 'simplified');
+    assert.equal(compatibilityDiagnostics.quality, 'compatibility');
     assert.equal(await compatibilityPage.locator('.operation-render canvas').count(), 1);
-    results.push({ test: 'major-performance-caveat-uses-simplified-webgl', ...compatibilityDiagnostics });
+    results.push({ test: 'major-performance-caveat-retries-compatible-webgl2', ...compatibilityDiagnostics });
     await compatibilityContext.close();
     await fallback.locator('.mobile-toggle').click();
     assert.equal(await fallback.locator('.mobile-toggle').getAttribute('aria-expanded'), 'true');

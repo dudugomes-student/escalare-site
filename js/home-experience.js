@@ -3,7 +3,6 @@ const host = document.querySelector('[data-operation-render]');
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const compact = matchMedia('(max-width: 900px)');
 const tablet = matchMedia('(min-width: 901px) and (max-width: 1180px)');
-const connection = navigator.connection;
 const stages = [
   ['Unidade de saúde', 'O cuidado começa com uma operação conectada.'],
   ['Setores conectados', 'Por dentro da unidade, cada setor tem seu contexto.'],
@@ -18,26 +17,31 @@ let generation = 0;
 let lastStage = -1;
 let inView = true;
 let disposed = false;
-let failed = false;
 const scriptPromises = new Map();
 
-function createWebGL2Surface() {
-  const attributes = { alpha: true, antialias: true, powerPreference: 'low-power' };
-  let canvas = document.createElement('canvas');
-  canvas.setAttribute('aria-hidden', 'true');
+function createWebGL2Surface(compatibilityOnly = false) {
   let context = null;
-  try {
-    context = canvas.getContext('webgl2', { ...attributes, failIfMajorPerformanceCaveat: true });
-  } catch {
-    /* Retry below with compatibility-oriented settings. */
+  if (!compatibilityOnly) {
+    const canvas = document.createElement('canvas');
+    canvas.setAttribute('aria-hidden', 'true');
+    try {
+      context = canvas.getContext('webgl2', {
+        alpha: true,
+        antialias: true,
+        powerPreference: 'high-performance',
+        failIfMajorPerformanceCaveat: true
+      });
+    } catch {
+      /* A compatible WebGL2 context is attempted below. */
+    }
+    if (context) return { canvas, context, compatibilityContext: false };
   }
-  if (context) return { canvas, context, compatibilityContext: false };
 
-  canvas = document.createElement('canvas');
+  const canvas = document.createElement('canvas');
   canvas.setAttribute('aria-hidden', 'true');
   try {
     context = canvas.getContext('webgl2', {
-      ...attributes,
+      alpha: true,
       antialias: false,
       powerPreference: 'default',
       failIfMajorPerformanceCaveat: false
@@ -115,12 +119,11 @@ function teardown() {
 
 function useFallback(reason) {
   generation++;
-  failed = true;
   teardownOperation();
   story.dataset.mode = reason;
 }
 
-async function enhance() {
+async function enhance(compatibilityOnly = false) {
   const ticket = ++generation;
   teardown();
   if (disposed) return;
@@ -141,7 +144,6 @@ async function enhance() {
     });
   } catch (error) {
     console.warn('[Escalare experience] Motion enhancement failed; keeping the static narrative.', error);
-    failed = true;
     if (ticket === generation) {
       teardown();
       story.dataset.mode = 'dependency-fallback';
@@ -149,20 +151,18 @@ async function enhance() {
     return;
   }
 
-  if (failed) {
-    story.dataset.mode = 'static';
-    return;
-  }
-
-  const surface = createWebGL2Surface();
+  const surface = createWebGL2Surface(compatibilityOnly);
   if (!surface) {
-    story.dataset.mode = 'no-webgl';
+    story.dataset.mode = 'semantic-fallback';
     return;
   }
 
   const { canvas, context, compatibilityContext } = surface;
-  const lowMemory = Number.isFinite(navigator.deviceMemory) && navigator.deviceMemory < 4;
-  const simplified = compatibilityContext || connection?.saveData === true || lowMemory;
+  const handleRenderFailure = reason => {
+    if (ticket !== generation || disposed) return;
+    if (!compatibilityContext) enhance(true);
+    else useFallback(`semantic-fallback-${reason}`);
+  };
   try {
     const module = await import('./operation-scene.js');
     if (ticket !== generation || disposed) {
@@ -172,9 +172,8 @@ async function enhance() {
     host.append(canvas);
     scene = module.createOperationScene(host, canvas, context, {
       mobile: compact.matches,
-      tablet: tablet.matches,
-      simplified,
-      onFailure: () => useFallback('render-fallback')
+      compatibility: compatibilityContext,
+      onFailure: handleRenderFailure
     });
     await scene.prepare();
     if (ticket !== generation || disposed) return;
@@ -182,7 +181,8 @@ async function enhance() {
     scene.renderNow();
     if (!scene) return;
     story.classList.add('is-webgl', 'is-enhanced');
-    story.dataset.mode = compact.matches ? 'mobile-webgl' : 'desktop-webgl';
+    story.dataset.mode = compatibilityContext ? 'compatibility-webgl' : 'full-webgl';
+    story.dataset.layout = compact.matches ? 'compact' : tablet.matches ? 'tablet' : 'wide';
     const playhead = { progress: 0 };
     timeline = window.gsap.timeline({
       scrollTrigger: {
@@ -213,7 +213,7 @@ async function enhance() {
     console.warn('[Escalare experience] WebGL enhancement failed; using the static operation while preserving the DOM narrative.', error);
     context.getExtension('WEBGL_lose_context')?.loseContext();
     canvas.remove();
-    if (ticket === generation) useFallback('render-fallback');
+    if (ticket === generation) handleRenderFailure('initialization');
   }
 }
 
@@ -229,10 +229,10 @@ function onVisibility() {
 }
 
 document.addEventListener('visibilitychange', onVisibility);
-reducedMotion.addEventListener('change', enhance);
-compact.addEventListener('change', enhance);
-tablet.addEventListener('change', enhance);
-connection?.addEventListener?.('change', enhance);
+const rebuild = () => enhance(false);
+reducedMotion.addEventListener('change', rebuild);
+compact.addEventListener('change', rebuild);
+tablet.addEventListener('change', rebuild);
 
 window.addEventListener('pagehide', () => {
   disposed = true;
@@ -243,7 +243,7 @@ window.addEventListener('pagehide', () => {
 window.addEventListener('pageshow', event => {
   if (event.persisted) {
     disposed = false;
-    enhance();
+    enhance(false);
   }
 });
 
@@ -258,6 +258,6 @@ showStage(0);
 
 // Let HTML, typography and the static composition paint before optional modules load.
 requestAnimationFrame(() => requestAnimationFrame(() => {
-  if ('requestIdleCallback' in window) requestIdleCallback(enhance, { timeout: 1800 });
-  else setTimeout(enhance, 150);
+  if ('requestIdleCallback' in window) requestIdleCallback(() => enhance(false), { timeout: 1800 });
+  else setTimeout(() => enhance(false), 150);
 }));

@@ -40,7 +40,7 @@ Experiência inicial seguida de ponte gráfica, contexto operacional, processo, 
 
 ## Three.js
 
-Mantém a arquitetura procedural e uma única superfície WebGL. A experiência usa qualidade desktop, tablet, mobile ou simplificada, com pixel ratio limitado a 1,6/1,35/1,25/1 e fallback somente quando WebGL2 não está disponível, há falha real de renderização ou a preferência de movimento reduzido exige a composição estática. Corredores permanecem na transformação e os detalhes das salas viram marcas da escala.
+Mantém a arquitetura procedural e uma única superfície WebGL na cena principal. A experiência completa é o padrão em desktop, tablet e mobile, com pixel ratio limitado a 1,6 e sombras preservadas. Apenas falha real tenta o modo de compatibilidade, com pixel ratio 1 e sem sombras; o fallback semântico entra se essa tentativa também falhar ou se a preferência de movimento reduzido exigir a composição estática. Corredores permanecem na transformação e os detalhes das salas viram marcas da escala.
 
 ## GSAP / ScrollTrigger
 
@@ -76,7 +76,7 @@ Verificado em 360, 375, 390, 412, 430 e 768 px. Menu amplo com gerenciamento de 
 
 ## Fallback
 
-SVG existente refinado semanticamente. Nenhuma biblioteca 3D é baixada quando WebGL2 está realmente indisponível ou há preferência por movimento reduzido. Economia de dados e memória reportada de 2 GB usam a experiência WebGL2 simplificada. A falha de dependência preserva o conteúdo e CTA.
+SVG e HTML existentes permanecem como base semântica. `deviceMemory`, `saveData`, touch, user-agent, largura, altura e orientação não reduzem qualidade. A ordem de recuperação é experiência completa, contexto WebGL2 compatível e fallback semântico; `prefers-reduced-motion` usa diretamente o estado estático acessível. A falha de dependência preserva o conteúdo e CTA.
 
 ## Reduced motion
 
@@ -84,7 +84,7 @@ Sem câmera animada ou sequência longa. Narrativa semântica permanece disponí
 
 ## Performance
 
-Renderização sob demanda, pausa fora da viewport e em documento oculto, redução progressiva de qualidade, geometrias compartilhadas e descarte. Dependências da experiência: aproximadamente 227 KB em estimativa gzip, carregadas somente quando elegíveis.
+Renderização sob demanda, pausa fora da viewport e em documento oculto, recuperação progressiva baseada em falha real, geometrias compartilhadas e descarte. Dependências da experiência: aproximadamente 227 KB em estimativa gzip, carregadas somente quando elegíveis.
 
 Medições locais não equivalem a dados de campo. Relatório mais recente: output/poc-review/performance.json. A inicialização WebGL ainda pode gerar uma tarefa longa em algumas máquinas; não foi alegado resultado Lighthouse ou INP de campo.
 

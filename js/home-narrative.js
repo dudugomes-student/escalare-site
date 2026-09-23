@@ -81,7 +81,27 @@ export function createHomeNarrative({ gsap, ScrollTrigger }) {
     });
 
     media.add('(max-width: 700px)', () => {
-      setScaleProgress(1);
+      const playhead = { progress: 0 };
+      const tween = gsap.to(playhead, {
+        progress: 1,
+        ease: 'none',
+        onUpdate: () => setScaleProgress(playhead.progress),
+        scrollTrigger: {
+          trigger: scaleStory,
+          start: 'top 78%',
+          end: 'bottom 24%',
+          scrub: .38,
+          invalidateOnRefresh: true,
+          onRefresh: () => setScaleProgress(playhead.progress)
+        }
+      });
+      animations.push(tween);
+      setScaleProgress(0);
+      return () => {
+        tween.scrollTrigger?.kill();
+        tween.kill();
+        setScaleProgress(1);
+      };
     });
   }
 
@@ -193,7 +213,8 @@ export function createHomeNarrative({ gsap, ScrollTrigger }) {
     scaleStory.getScaleDiagnostics = () => ({
       stage: scaleStageIndex + 1,
       progress: scaleProgress,
-      pinned: matchMedia('(min-width: 701px)').matches
+      pinned: matchMedia('(min-width: 701px)').matches,
+      mode: matchMedia('(min-width: 701px)').matches ? 'pinned' : 'responsive-scroll'
     });
   }
 
