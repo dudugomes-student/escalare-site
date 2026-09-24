@@ -24,6 +24,18 @@ function createWebGL2Surface(compatibilityOnly = false) {
       });
       if (context) return { canvas, context, compatibility: false };
     } catch {
+      // A second full-quality request without the caveat veto is attempted below.
+    }
+    const retryCanvas = makeCanvas();
+    try {
+      const context = retryCanvas.getContext('webgl2', {
+        alpha: true,
+        antialias: true,
+        powerPreference: 'high-performance',
+        failIfMajorPerformanceCaveat: false
+      });
+      if (context) return { canvas: retryCanvas, context, compatibility: false };
+    } catch {
       // A compatible WebGL2 configuration is the next capability step.
     }
   }

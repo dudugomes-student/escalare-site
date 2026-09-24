@@ -21,6 +21,17 @@ const assert = require('node:assert/strict');
    assert.equal(await page.locator('.operation-render canvas').count(),1);
   }
   results.push({test:'desktop/tablet/mobile/low-height keep full quality and one canvas',pass:true});
+  const denseContext=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:3});
+  const densePage=await denseContext.newPage();
+  await densePage.goto(base,{waitUntil:'networkidle'});
+  await densePage.waitForFunction(()=>document.querySelector('[data-operation-story]').dataset.mode==='full-webgl');
+  const denseDiagnostics=await densePage.locator('[data-operation-story]').evaluate(el=>el.getOperationDiagnostics());
+  assert(denseDiagnostics.pixelRatio>2&&denseDiagnostics.pixelRatio<=2.25);
+  assert(Math.abs(denseDiagnostics.drawingBuffer.width-denseDiagnostics.cssSize.width*denseDiagnostics.pixelRatio)<=2);
+  assert(Math.abs(denseDiagnostics.drawingBuffer.height-denseDiagnostics.cssSize.height*denseDiagnostics.pixelRatio)<=2);
+  assert(denseDiagnostics.drawingBuffer.width*denseDiagnostics.drawingBuffer.height<=denseDiagnostics.pixelBudget*1.02);
+  results.push({test:'high-density canvas is sharp and bounded by a physical-pixel budget',diagnostics:denseDiagnostics});
+  await denseContext.close();
   await page.setViewportSize({width:844,height:390});
   await page.waitForFunction(()=>document.querySelector('[data-operation-story]').dataset.mode==='full-webgl');
   assert.equal(await page.locator('.operation-render canvas').count(),1);
@@ -104,11 +115,26 @@ const assert = require('node:assert/strict');
   results.push({test:'management mobile keeps the full 3D narrative',pass:true});
 
   await page.setViewportSize({width:1440,height:1000});
+  await page.goto(base+'solucoes.html',{waitUntil:'networkidle'});
+  await page.evaluate(()=>scrollTo({top:0,behavior:'instant'}));
+  assert.equal(await page.locator('[data-system-map]').getAttribute('data-scene-state'),'parts');
+  const solutionStates=[];
+  for(const progress of [.02,.32,.57,.94]){
+   const target=await page.locator('[data-system-map]').evaluate((scene,value)=>{const story=scene.closest('.hero-split')||scene;scene.classList.add('is-measuring');const header=document.querySelector('.site-header')?.offsetHeight||80;const sceneTop=scrollY+scene.getBoundingClientRect().top;const storyBottom=scrollY+story.getBoundingClientRect().bottom;const start=Math.max(0,sceneTop-header-24);const travel=Math.max(innerHeight*.72,storyBottom-scene.offsetHeight-start);scene.classList.remove('is-measuring');return start+value*travel;},progress);
+   await page.evaluate(y=>scrollTo({top:y,behavior:'instant'}),target);
+   await page.waitForTimeout(300);
+   solutionStates.push(await page.locator('[data-system-map]').getAttribute('data-scene-state'));
+  }
+  assert.deepEqual(solutionStates,['parts','proximity','relations','system']);
+  assert.equal(await page.locator('[data-system-map] canvas').count(),0);
+  results.push({test:'solutions transforms demand, professionals and schedules into one system without decorative 3D',states:solutionStates});
+
+  await page.setViewportSize({width:1440,height:1000});
   await page.goto(base+'para-instituicoes.html',{waitUntil:'networkidle'});
   await page.waitForFunction(()=>document.querySelector('[data-internal-scene="institutions"]')?.dataset.renderMode==='full');
   const institutionStates=[];
   for(const progress of [.02,.32,.57,.94]){
-   const target=await page.locator('[data-coordination-field]').evaluate((scene,value)=>{const story=scene.closest('.page-hero');const header=document.querySelector('.site-header')?.offsetHeight||80;const stickyTop=header+(innerHeight<620?12:28);const sceneTop=scrollY+scene.getBoundingClientRect().top;const storyTop=scrollY+story.getBoundingClientRect().top;const start=sceneTop-stickyTop;const end=storyTop+story.offsetHeight-scene.offsetHeight-stickyTop;return start+value*Math.max(end-start,innerHeight*.82);},progress);
+   const target=await page.locator('[data-coordination-field]').evaluate((scene,value)=>{const story=scene.closest('.page-hero');const header=document.querySelector('.site-header')?.offsetHeight||80;const stickyTop=header+(innerHeight<620?12:28);scene.classList.add('is-measuring');const sceneTop=scrollY+scene.getBoundingClientRect().top;const storyTop=scrollY+story.getBoundingClientRect().top;const start=sceneTop-stickyTop;const end=storyTop+story.offsetHeight-scene.offsetHeight-stickyTop;scene.classList.remove('is-measuring');return start+value*Math.max(end-start,innerHeight*2.2);},progress);
    await page.evaluate(y=>scrollTo({top:y,behavior:'instant'}),target);
    await page.waitForTimeout(450);
    institutionStates.push({state:await page.locator('[data-coordination-field]').getAttribute('data-coordination-state'),diagnostics:await page.locator('[data-internal-scene="institutions"]').evaluate(el=>el.getSceneDiagnostics())});
@@ -122,7 +148,7 @@ const assert = require('node:assert/strict');
   await page.setViewportSize({width:390,height:844});
   await page.evaluate(()=>scrollTo({top:0,behavior:'instant'}));
   await page.waitForTimeout(300);
-  const institutionMobileTarget=await page.locator('[data-coordination-field]').evaluate(scene=>{const story=scene.closest('.page-hero');const header=document.querySelector('.site-header')?.offsetHeight||80;const stickyTop=header+(innerHeight<620?12:28);scene.classList.add('is-measuring');const sceneTop=scrollY+scene.getBoundingClientRect().top;const storyTop=scrollY+story.getBoundingClientRect().top;const start=sceneTop-stickyTop;const end=storyTop+story.offsetHeight-scene.offsetHeight-stickyTop;scene.classList.remove('is-measuring');return start+.94*Math.max(end-start,innerHeight*.82);});
+  const institutionMobileTarget=await page.locator('[data-coordination-field]').evaluate(scene=>{const story=scene.closest('.page-hero');const header=document.querySelector('.site-header')?.offsetHeight||80;const stickyTop=header+(innerHeight<620?12:28);scene.classList.add('is-measuring');const sceneTop=scrollY+scene.getBoundingClientRect().top;const storyTop=scrollY+story.getBoundingClientRect().top;const start=sceneTop-stickyTop;const end=storyTop+story.offsetHeight-scene.offsetHeight-stickyTop;scene.classList.remove('is-measuring');return start+.94*Math.max(end-start,innerHeight*2.2);});
   await page.evaluate(y=>scrollTo({top:y,behavior:'instant'}),institutionMobileTarget);
   await page.waitForTimeout(500);
   const institutionMobileDiagnostics=await page.locator('[data-internal-scene="institutions"]').evaluate(el=>el.getSceneDiagnostics());

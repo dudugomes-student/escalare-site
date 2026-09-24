@@ -35,6 +35,20 @@ function createWebGL2Surface(compatibilityOnly = false) {
       /* A compatible WebGL2 context is attempted below. */
     }
     if (context) return { canvas, context, compatibilityContext: false };
+
+    const retryCanvas = document.createElement('canvas');
+    retryCanvas.setAttribute('aria-hidden', 'true');
+    try {
+      context = retryCanvas.getContext('webgl2', {
+        alpha: true,
+        antialias: true,
+        powerPreference: 'high-performance',
+        failIfMajorPerformanceCaveat: false
+      });
+    } catch {
+      context = null;
+    }
+    if (context) return { canvas: retryCanvas, context, compatibilityContext: false };
   }
 
   const canvas = document.createElement('canvas');

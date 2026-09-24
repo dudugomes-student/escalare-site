@@ -1,5 +1,16 @@
 import * as THREE from './vendor/three.module.min.js';
 
+const FULL_PIXEL_BUDGET = 7_500_000;
+const COMPATIBILITY_PIXEL_BUDGET = 3_000_000;
+
+function resolvePixelRatio(width, height, compatibility) {
+  const nativeRatio = Math.max(1, window.devicePixelRatio || 1);
+  const ratioCap = compatibility ? 1.25 : 2.25;
+  const pixelBudget = compatibility ? COMPATIBILITY_PIXEL_BUDGET : FULL_PIXEL_BUDGET;
+  const budgetRatio = Math.sqrt(pixelBudget / Math.max(1, width * height));
+  return Math.max(1, Math.min(nativeRatio, ratioCap, budgetRatio));
+}
+
 const mix = THREE.MathUtils.lerp;
 const smooth = (a, b, value) => { const t = THREE.MathUtils.clamp((value - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 
@@ -10,10 +21,10 @@ export function createOperationScene(host, canvas, context, { mobile, compatibil
   renderer.setClearColor(0x000000, 0);
   const quality = compatibility ? 'compatibility' : 'full';
   const shadows = !compatibility;
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, compatibility ? 1 : 1.6));
+  renderer.setPixelRatio(1);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.25;
+  renderer.toneMappingExposure = 1.20;
   renderer.shadowMap.enabled = shadows;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -21,7 +32,7 @@ export function createOperationScene(host, canvas, context, { mobile, compatibil
   const camera = new THREE.PerspectiveCamera(mobile ? 39 : 35, 1, .1, 70);
   const rig = new THREE.Group();
   scene.add(rig);
-  scene.add(new THREE.HemisphereLight(0xf8fff8, 0x789089, 3));
+  scene.add(new THREE.HemisphereLight(0xf8fff8, 0x5c736a, 3.2));
   const key = new THREE.DirectionalLight(0xfffaf0, 4);
   key.position.set(-4, 10, 5);
   key.castShadow = shadows;
@@ -182,6 +193,8 @@ export function createOperationScene(host, canvas, context, { mobile, compatibil
     const width = host.clientWidth;
     const height = host.clientHeight;
     if (!width || !height || disposed) return;
+    const nextPixelRatio = resolvePixelRatio(width, height, compatibility);
+    if (Math.abs(renderer.getPixelRatio() - nextPixelRatio) > .01) renderer.setPixelRatio(nextPixelRatio);
     renderer.setSize(width, height, false);
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
@@ -189,6 +202,7 @@ export function createOperationScene(host, canvas, context, { mobile, compatibil
   }
   const resizeObserver = new ResizeObserver(resize);
   resizeObserver.observe(host);
+  addEventListener('resize', resize, { passive: true });
   function lost(event) { event.preventDefault(); onFailure(); }
   canvas.addEventListener('webglcontextlost', lost);
   resize();
@@ -203,10 +217,24 @@ export function createOperationScene(host, canvas, context, { mobile, compatibil
     update,
     setVisible(value) { visible = value; if (value) requestRender(); else { cancelAnimationFrame(frame); frame = 0; } },
     renderNow() { cancelAnimationFrame(frame); render(); },
-    getDiagnostics() { return { renders, drawCalls: renderer.info.render.calls, triangles: renderer.info.render.triangles, pixelRatio: renderer.getPixelRatio(), progress, quality }; },
+    getDiagnostics() {
+      const drawingBuffer = renderer.getDrawingBufferSize(new THREE.Vector2());
+      return {
+        renders,
+        drawCalls: renderer.info.render.calls,
+        triangles: renderer.info.render.triangles,
+        pixelRatio: renderer.getPixelRatio(),
+        cssSize: { width: host.clientWidth, height: host.clientHeight },
+        drawingBuffer: { width: drawingBuffer.x, height: drawingBuffer.y },
+        pixelBudget: compatibility ? COMPATIBILITY_PIXEL_BUDGET : FULL_PIXEL_BUDGET,
+        progress,
+        quality
+      };
+    },
     dispose() {
       if (disposed) return;
       disposed = true; cancelAnimationFrame(frame); resizeObserver.disconnect();
+      removeEventListener('resize', resize);
       canvas.removeEventListener('webglcontextlost', lost);
       canvas.remove();
       const release = () => {

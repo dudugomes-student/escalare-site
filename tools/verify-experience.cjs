@@ -170,11 +170,11 @@ const executablePath = process.env.BROWSER_PATH || 'C:/Program Files (x86)/Micro
     });
     const compatibilityPage = await compatibilityContext.newPage();
     await compatibilityPage.goto(base, { waitUntil: 'networkidle' });
-    await compatibilityPage.waitForFunction(() => document.querySelector('[data-operation-story]').dataset.mode === 'compatibility-webgl');
+    await compatibilityPage.waitForFunction(() => document.querySelector('[data-operation-story]').dataset.mode === 'full-webgl');
     const compatibilityDiagnostics = await compatibilityPage.locator('[data-operation-story]').evaluate(el => el.getOperationDiagnostics());
-    assert.equal(compatibilityDiagnostics.quality, 'compatibility');
+    assert.equal(compatibilityDiagnostics.quality, 'full');
     assert.equal(await compatibilityPage.locator('.operation-render canvas').count(), 1);
-    results.push({ test: 'major-performance-caveat-retries-compatible-webgl2', ...compatibilityDiagnostics });
+    results.push({ test: 'major-performance-caveat-veto-does-not-preemptively-reduce-quality', ...compatibilityDiagnostics });
     await compatibilityContext.close();
     await fallback.locator('.mobile-toggle').click();
     assert.equal(await fallback.locator('.mobile-toggle').getAttribute('aria-expanded'), 'true');

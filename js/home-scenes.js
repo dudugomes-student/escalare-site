@@ -1,5 +1,16 @@
 import * as THREE from './vendor/three.module.min.js';
 
+const FULL_PIXEL_BUDGET = 7_500_000;
+const COMPATIBILITY_PIXEL_BUDGET = 3_000_000;
+
+function resolvePixelRatio(width, height, compatibility) {
+  const nativeRatio = Math.max(1, window.devicePixelRatio || 1);
+  const ratioCap = compatibility ? 1.25 : 2.25;
+  const pixelBudget = compatibility ? COMPATIBILITY_PIXEL_BUDGET : FULL_PIXEL_BUDGET;
+  const budgetRatio = Math.sqrt(pixelBudget / Math.max(1, width * height));
+  return Math.max(1, Math.min(nativeRatio, ratioCap, budgetRatio));
+}
+
 const clamp = value => THREE.MathUtils.clamp(value, 0, 1);
 const mix = THREE.MathUtils.lerp;
 const smooth = (from, to, value) => {
@@ -22,10 +33,10 @@ export function createHomeScene(host, canvas, context, {
     powerPreference: compatibility ? 'default' : 'high-performance'
   });
   renderer.setClearColor(0x000000, 0);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, compatibility ? 1 : 1.6));
+  renderer.setPixelRatio(1);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = dark ? 1.3 : 1.16;
+  renderer.toneMappingExposure = dark ? 1.22 : 1.12;
   renderer.shadowMap.enabled = !compatibility;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -34,8 +45,8 @@ export function createHomeScene(host, canvas, context, {
   const root = new THREE.Group();
   scene.add(root);
 
-  scene.add(new THREE.HemisphereLight(dark ? 0xa9e6d4 : 0xf8fff9, dark ? 0x071b2c : 0x56716b, dark ? 2.1 : 2.8));
-  const key = new THREE.DirectionalLight(dark ? 0xc9fff0 : 0xffffff, dark ? 4.4 : 3.7);
+  scene.add(new THREE.HemisphereLight(dark ? 0xa9e6d4 : 0xf8fff9, dark ? 0x0d2a3a : 0x4a6460, dark ? 2.4 : 3.0));
+  const key = new THREE.DirectionalLight(dark ? 0xc9fff0 : 0xffffff, dark ? 4.8 : 4.0);
   key.position.set(-5, 8, 7);
   key.castShadow = !compatibility;
   key.shadow.mapSize.set(compatibility ? 512 : 1024, compatibility ? 512 : 1024);
@@ -52,8 +63,8 @@ export function createHomeScene(host, canvas, context, {
   const material = (color, options = {}) => {
     const value = new THREE.MeshStandardMaterial({
       color,
-      roughness: .76,
-      metalness: .035,
+      roughness: .72,
+      metalness: .05,
       ...options
     });
     materials.add(value);
@@ -80,19 +91,19 @@ export function createHomeScene(host, canvas, context, {
     align = 'center'
   } = {}) => {
     const textCanvas = document.createElement('canvas');
-    textCanvas.width = 1024;
-    textCanvas.height = 256;
+    textCanvas.width = 1536;
+    textCanvas.height = 384;
     const paint = textCanvas.getContext('2d');
     paint.clearRect(0, 0, textCanvas.width, textCanvas.height);
     paint.fillStyle = color;
-    paint.font = `${weight} ${fontSize}px "Plus Jakarta Sans", Inter, sans-serif`;
+    paint.font = `${weight} ${fontSize * 1.5}px "Plus Jakarta Sans", Inter, sans-serif`;
     paint.textAlign = align;
     paint.textBaseline = 'middle';
-    const x = align === 'left' ? 30 : align === 'right' ? 994 : 512;
-    paint.fillText(text, x, 128, 964);
+    const x = align === 'left' ? 45 : align === 'right' ? 1491 : 768;
+    paint.fillText(text, x, 192, 1446);
     const texture = new THREE.CanvasTexture(textCanvas);
     texture.colorSpace = THREE.SRGBColorSpace;
-    texture.anisotropy = compatibility ? 1 : 4;
+    texture.anisotropy = compatibility ? 1 : Math.min(renderer.capabilities.getMaxAnisotropy(), 8);
     textures.add(texture);
     const surface = new THREE.MeshBasicMaterial({
       map: texture,
@@ -173,6 +184,8 @@ export function createHomeScene(host, canvas, context, {
     const width = host.clientWidth;
     const height = host.clientHeight;
     if (!width || !height || disposed) return;
+    const nextPixelRatio = resolvePixelRatio(width, height, compatibility);
+    if (Math.abs(renderer.getPixelRatio() - nextPixelRatio) > .01) renderer.setPixelRatio(nextPixelRatio);
     renderer.setSize(width, height, false);
     camera.aspect = width / height;
     sceneController.resize?.({ width, height, compact: width < 620 || width / height < .82 });
@@ -182,6 +195,7 @@ export function createHomeScene(host, canvas, context, {
 
   const resizeObserver = new ResizeObserver(resize);
   resizeObserver.observe(host);
+  addEventListener('resize', resize, { passive: true });
   const visibilityObserver = new IntersectionObserver(entries => {
     visible = entries[0]?.isIntersecting ?? true;
     if (visible) requestRender();
@@ -220,7 +234,13 @@ export function createHomeScene(host, canvas, context, {
         renders,
         drawCalls: renderer.info.render.calls,
         triangles: renderer.info.render.triangles,
-        pixelRatio: renderer.getPixelRatio()
+        pixelRatio: renderer.getPixelRatio(),
+        cssSize: { width: host.clientWidth, height: host.clientHeight },
+        drawingBuffer: (() => {
+          const size = renderer.getDrawingBufferSize(new THREE.Vector2());
+          return { width: size.x, height: size.y };
+        })(),
+        pixelBudget: compatibility ? COMPATIBILITY_PIXEL_BUDGET : FULL_PIXEL_BUDGET
       };
     },
     dispose() {
@@ -228,6 +248,7 @@ export function createHomeScene(host, canvas, context, {
       disposed = true;
       if (frame) cancelAnimationFrame(frame);
       resizeObserver.disconnect();
+      removeEventListener('resize', resize);
       visibilityObserver.disconnect();
       canvas.removeEventListener('webglcontextlost', contextLost);
       canvas.remove();
@@ -249,7 +270,7 @@ function createSceneByType(type, tools) {
 
 function createScaleScene({ root, camera, geometry, material, lineMaterial, addMesh, createTextPlane, faceCamera, surfaces }) {
   const cellShape = geometry(new THREE.BoxGeometry(1, 1, 1));
-  const markerShape = geometry(new THREE.SphereGeometry(1, 18, 12));
+  const markerShape = geometry(new THREE.SphereGeometry(1, 24, 16));
   const cells = [];
   const starts = [];
   const targets = [];
@@ -314,9 +335,9 @@ function createScaleScene({ root, camera, geometry, material, lineMaterial, addM
       const selectedScale = selected ? 1 + relate * .28 : 1;
       cell.scale.set(.78 * selectedScale, mix(.07, selected ? .28 : .13, depth) * selectedScale, .58 * selectedScale);
       if (selected) {
-        cell.position.y += relate * .42 + handoff * 1.35;
-        cell.position.z += handoff * 1.3;
-        cell.scale.multiplyScalar(1 + handoff * .65);
+        cell.position.y += relate * .5 + handoff * .95;
+        cell.position.z += handoff * .8;
+        cell.scale.multiplyScalar(1 + handoff * .45);
       }
     });
     markers.forEach((marker, index) => {
@@ -328,7 +349,7 @@ function createScaleScene({ root, camera, geometry, material, lineMaterial, addM
         mix(1.8 + index % 2 * .28, target.y + .28, populate),
         mix(Math.sin(angle) * 2.1, target.z, populate)
       );
-      marker.scale.setScalar(Math.max(.001, .105 * populate * (1 - handoff * .35)));
+      marker.scale.setScalar(Math.max(.001, .14 * populate * (1 - handoff * .3)));
       markerSurfaces[index].opacity = populate * mix(.5, 1, relate);
     });
     const positions = relationShape.attributes.position;
@@ -343,8 +364,8 @@ function createScaleScene({ root, camera, geometry, material, lineMaterial, addM
       const [from, to] = labelWindows[index];
       label.userData.textSurface.opacity = index === 3 ? smooth(from, from + .08, progress) : windowed(from, to, progress);
     });
-    root.rotation.set(mix(-.08, -.26, depth), mix(-.45, .12, relate), 0);
-    camera.position.set(mix(5.4, 2.2, relate), mix(5.2, 4.15, depth), mix(7.6, 6.1, relate));
+    root.rotation.set(mix(-.06, -.32, depth), mix(-.5, .15, relate), 0);
+    camera.position.set(mix(6.2, 1.4, relate), mix(6.8, 3.5, depth), mix(8.5, 5.2, relate));
     focus.copy(cells[activeIndex].position).multiplyScalar(relate * .38);
     camera.lookAt(focus);
     faceCamera(...labels);
@@ -358,19 +379,29 @@ function createHumanScene({ root, camera, geometry, material, lineMaterial, addM
   const entryCell = addMesh(geometry(new THREE.BoxGeometry(2.7, .18, 1.75)), entrySurface);
   const body = new THREE.Group();
   root.add(body);
-  const head = addMesh(geometry(new THREE.SphereGeometry(.68, 28, 20)), surfaces.ink, body);
-  const torso = addMesh(geometry(new THREE.CylinderGeometry(.82, 1.15, 2.35, 28)), surfaces.green, body);
-  const shoulder = addMesh(geometry(new THREE.TorusGeometry(1.2, .18, 10, 40, Math.PI)), surfaces.pale, body);
-  shoulder.rotation.z = Math.PI;
-  shoulder.rotation.x = Math.PI / 2;
-  head.position.y = 1.55;
-  torso.position.y = -.15;
-  shoulder.position.y = -.98;
+  const humanInk = material(0x194a53, { roughness: .58, metalness: .04 });
+  const head = addMesh(geometry(new THREE.SphereGeometry(.58, 32, 24)), humanInk, body);
+  head.scale.set(1, 1.08, .92);
+  const warmBody = material(0x1d7868, { roughness: .62, metalness: .025 });
+  const torsoProfile = [
+    new THREE.Vector2(.62, -1.2),
+    new THREE.Vector2(.92, -1.08),
+    new THREE.Vector2(1.08, -.58),
+    new THREE.Vector2(1.02, -.05),
+    new THREE.Vector2(.82, .48),
+    new THREE.Vector2(.48, .78)
+  ];
+  const torso = addMesh(geometry(new THREE.LatheGeometry(torsoProfile, 44)), warmBody, body);
+  const shoulder = addMesh(geometry(new THREE.TorusGeometry(1.18, .055, 12, 64, Math.PI * 1.35)), surfaces.pale, body);
+  shoulder.rotation.z = Math.PI * .82;
+  head.position.y = 1.48;
+  torso.position.y = -.08;
+  shoulder.position.set(0, .28, .22);
   const marker = addMesh(geometry(new THREE.SphereGeometry(.13, 18, 12)), surfaces.mint, body);
-  marker.position.set(0, .2, .82);
+  marker.position.set(0, .2, 1.02);
 
   const panels = Array.from({ length: 9 }, (_, index) => {
-    const panel = addMesh(geometry(new THREE.BoxGeometry(.9, .07, .66)), index === 4 ? surfaces.green : surfaces.paper);
+    const panel = addMesh(geometry(new THREE.BoxGeometry(.9, .1, .66)), index === 4 ? surfaces.green : surfaces.paper);
     panel.userData.index = index;
     return panel;
   });
@@ -437,7 +468,7 @@ function createHumanScene({ root, camera, geometry, material, lineMaterial, addM
     labels[3].userData.textSurface.opacity = smooth(.72, .82, progress);
 
     root.rotation.y = mix(-.2, .18, context);
-    camera.position.set(mix(4.4, 1.15, care), mix(2.1, 1.35, presence), mix(8.5, 6.1, context));
+    camera.position.set(mix(4.4, 1.35, care), mix(2.4, 1.55, presence), mix(8.5, 6.35, context));
     camera.lookAt(0, mix(.1, .25, presence), mix(-.3, -.55, context));
     faceCamera(...labels);
   }
@@ -478,7 +509,7 @@ function createConvergenceScene({ root, camera, geometry, material, lineMaterial
     createTextPlane('COMPLEXIDADE', { width: 3.25, height: .4, color: '#8db8ae', fontSize: 76 }),
     createTextPlane('ORGANIZAÇÃO', { width: 3.25, height: .4, fontSize: 78 }),
     createTextPlane('CLAREZA', { width: 2.1, height: .4, fontSize: 88 }),
-    createTextPlane('ESCALARE', { width: 3.45, height: .55, color: '#f1fbf7', fontSize: 108 }),
+    createTextPlane('RELAÇÕES ORGANIZADAS', { width: 4.6, height: .5, color: '#f1fbf7', fontSize: 72 }),
     createTextPlane('OPERAÇÃO · PESSOAS · CONTINUIDADE', { width: 4.6, height: .3, color: '#78cdb7', fontSize: 48, weight: 500 })
   ];
   labels[0].position.set(-2.5, 2.2, -.8);
@@ -506,7 +537,7 @@ function createConvergenceScene({ root, camera, geometry, material, lineMaterial
         mix((index % 4 - 1.5) * .38, 0, organize),
         mix(index % 2 ? .3 : -.3, 0, clarify)
       );
-      cell.scale.set(mix(.42, .88, gather), mix(.42, .12, clarify), mix(.42, .64, organize));
+      cell.scale.set(mix(.42, .92, gather), mix(.42, .14, clarify), mix(.42, .68, organize));
       if (index % 4 !== 0) cell.scale.multiplyScalar(mix(1, .72, settle));
     });
     nodes.forEach((node, index) => {
@@ -524,15 +555,15 @@ function createConvergenceScene({ root, camera, geometry, material, lineMaterial
     positions.needsUpdate = true;
     lineSurface.opacity = clarify * .72;
     continuityRing.scale.setScalar(Math.max(.001, settle));
-    continuityRing.rotation.z = mix(-.7, 0, settle);
+    continuityRing.rotation.z = mix(-.4, 0, settle);
     labels[0].userData.textSurface.opacity = windowed(0, .38, progress);
     labels[1].userData.textSurface.opacity = windowed(.2, .64, progress);
     labels[2].userData.textSurface.opacity = windowed(.48, .84, progress);
     labels[3].userData.textSurface.opacity = smooth(.72, .88, progress);
     labels[4].userData.textSurface.opacity = smooth(.82, .96, progress);
-    platform.scale.set(mix(.42, 1, settle), 1, mix(.42, 1, settle));
+    platform.scale.set(mix(.35, 1.1, settle), 1, mix(.35, 1.1, settle));
     root.rotation.set(mix(-.1, -.18, organize), mix(-.58, .04, settle), 0);
-    camera.position.set(mix(5.8, .45, settle), mix(3.7, 2.8, clarify), mix(9.8, 7.2, organize));
+    camera.position.set(mix(5.8, .2, settle), mix(3.7, 2.5, clarify), mix(9.8, 6.8, organize));
     camera.lookAt(0, mix(.45, -.05, settle), 0);
     faceCamera(...labels);
   }

@@ -1,5 +1,16 @@
 import * as THREE from './vendor/three.module.min.js';
 
+const FULL_PIXEL_BUDGET = 7_500_000;
+const COMPATIBILITY_PIXEL_BUDGET = 3_000_000;
+
+function resolvePixelRatio(width, height, compatibility) {
+  const nativeRatio = Math.max(1, window.devicePixelRatio || 1);
+  const ratioCap = compatibility ? 1.25 : 2.25;
+  const pixelBudget = compatibility ? COMPATIBILITY_PIXEL_BUDGET : FULL_PIXEL_BUDGET;
+  const budgetRatio = Math.sqrt(pixelBudget / Math.max(1, width * height));
+  return Math.max(1, Math.min(nativeRatio, ratioCap, budgetRatio));
+}
+
 const clamp = value => THREE.MathUtils.clamp(value, 0, 1);
 const mix = THREE.MathUtils.lerp;
 const smooth = (from, to, value) => {
@@ -20,10 +31,10 @@ export function createInternalScene(host, canvas, context, {
     powerPreference: compatibility ? 'default' : 'high-performance'
   });
   renderer.setClearColor(0x000000, 0);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, compatibility ? 1 : 1.6));
+  renderer.setPixelRatio(1);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.18;
+  renderer.toneMappingExposure = 1.15;
   renderer.shadowMap.enabled = !compatibility;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -32,15 +43,15 @@ export function createInternalScene(host, canvas, context, {
   const root = new THREE.Group();
   scene.add(root);
 
-  const hemi = new THREE.HemisphereLight(0xf6fff8, 0x31505a, 2.5);
+  const hemi = new THREE.HemisphereLight(0xf6fff8, 0x3d5f5a, 2.8);
   scene.add(hemi);
   const key = new THREE.DirectionalLight(0xf7fff8, 3.5);
   key.position.set(-4, 7, 6);
   key.castShadow = !compatibility;
-  key.shadow.mapSize.set(768, 768);
+  key.shadow.mapSize.set(1024, 1024);
   key.shadow.normalBias = .035;
   scene.add(key);
-  const rim = new THREE.DirectionalLight(0x7fcab4, 1.5);
+  const rim = new THREE.DirectionalLight(0x7fcab4, 2.0);
   rim.position.set(5, 2, -5);
   scene.add(rim);
 
@@ -51,8 +62,8 @@ export function createInternalScene(host, canvas, context, {
   const material = (color, options = {}) => {
     const value = new THREE.MeshStandardMaterial({
       color,
-      roughness: .78,
-      metalness: .04,
+      roughness: .72,
+      metalness: .06,
       ...options
     });
     materials.add(value);
@@ -78,18 +89,18 @@ export function createInternalScene(host, canvas, context, {
     weight = 600
   } = {}) => {
     const textCanvas = document.createElement('canvas');
-    textCanvas.width = 1024;
-    textCanvas.height = 256;
+    textCanvas.width = 1536;
+    textCanvas.height = 384;
     const paint = textCanvas.getContext('2d');
-    paint.clearRect(0, 0, 1024, 256);
+    paint.clearRect(0, 0, 1536, 384);
     paint.fillStyle = color;
-    paint.font = `${weight} ${fontSize}px "Plus Jakarta Sans", Inter, sans-serif`;
+    paint.font = `${weight} ${fontSize * 1.5}px "Plus Jakarta Sans", Inter, sans-serif`;
     paint.textAlign = 'center';
     paint.textBaseline = 'middle';
-    paint.fillText(text, 512, 128, 964);
+    paint.fillText(text, 768, 192, 1446);
     const texture = new THREE.CanvasTexture(textCanvas);
     texture.colorSpace = THREE.SRGBColorSpace;
-    texture.anisotropy = compatibility ? 1 : 4;
+    texture.anisotropy = compatibility ? 1 : Math.min(renderer.capabilities.getMaxAnisotropy(), 8);
     textures.add(texture);
     const surface = new THREE.MeshBasicMaterial({
       map: texture,
@@ -173,6 +184,8 @@ export function createInternalScene(host, canvas, context, {
     const width = host.clientWidth;
     const height = host.clientHeight;
     if (!width || !height || disposed) return;
+    const nextPixelRatio = resolvePixelRatio(width, height, compatibility);
+    if (Math.abs(renderer.getPixelRatio() - nextPixelRatio) > .01) renderer.setPixelRatio(nextPixelRatio);
     renderer.setSize(width, height, false);
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
@@ -182,6 +195,7 @@ export function createInternalScene(host, canvas, context, {
 
   const resizeObserver = new ResizeObserver(resize);
   resizeObserver.observe(host);
+  addEventListener('resize', resize, { passive: true });
   const visibilityObserver = new IntersectionObserver(entries => {
     visible = entries[0]?.isIntersecting ?? true;
     if (visible) requestRender();
@@ -216,7 +230,13 @@ export function createInternalScene(host, canvas, context, {
         renders,
         drawCalls: renderer.info.render.calls,
         triangles: renderer.info.render.triangles,
-        pixelRatio: renderer.getPixelRatio()
+        pixelRatio: renderer.getPixelRatio(),
+        cssSize: { width: host.clientWidth, height: host.clientHeight },
+        drawingBuffer: (() => {
+          const size = renderer.getDrawingBufferSize(new THREE.Vector2());
+          return { width: size.x, height: size.y };
+        })(),
+        pixelBudget: compatibility ? COMPATIBILITY_PIXEL_BUDGET : FULL_PIXEL_BUDGET
       };
     },
     dispose() {
@@ -224,6 +244,7 @@ export function createInternalScene(host, canvas, context, {
       disposed = true;
       if (frame) cancelAnimationFrame(frame);
       resizeObserver.disconnect();
+      removeEventListener('resize', resize);
       visibilityObserver.disconnect();
       canvas.removeEventListener('webglcontextlost', contextLost);
       canvas.remove();
@@ -245,7 +266,7 @@ function createSceneByType(type, tools) {
 
 function createManagementScene({ root, camera, geometry, lineMaterial, addMesh, createTextPlane, faceCamera, surfaces }) {
   const cellShape = geometry(new THREE.BoxGeometry(1, 1, 1));
-  const markerShape = geometry(new THREE.SphereGeometry(1, 14, 10));
+  const markerShape = geometry(new THREE.SphereGeometry(1, 20, 14));
   const cells = [];
   const markers = [];
   const starts = [];
@@ -256,9 +277,9 @@ function createManagementScene({ root, camera, geometry, lineMaterial, addMesh, 
     const cell = addMesh(cellShape, surface);
     const angle = index * 1.73;
     starts.push(new THREE.Vector3(
-      Math.cos(angle) * (2.1 + index % 3 * .38),
-      Math.sin(index * .9) * 1.25,
-      Math.sin(angle) * (1.8 + index % 4 * .26)
+      Math.cos(angle) * (2.8 + index % 3 * .45),
+      Math.sin(index * .9) * 1.6,
+      Math.sin(angle) * (2.4 + index % 4 * .32)
     ));
     cells.push(cell);
   }
@@ -309,9 +330,9 @@ function createManagementScene({ root, camera, geometry, lineMaterial, addMesh, 
       const target = new THREE.Vector3((column - 2) * .76, 0, (row - 1.5) * .61);
       cell.position.lerpVectors(starts[index], target, assemble);
       cell.rotation.set(
-        mix((index % 3 - 1) * .48, 0, assemble),
-        mix((index % 4 - 1.5) * .32, 0, assemble),
-        mix((index % 2 ? 1 : -1) * .18, 0, assemble)
+        mix((index % 3 - 1) * .6, 0, assemble),
+        mix((index % 4 - 1.5) * .45, 0, assemble),
+        mix((index % 2 ? 1 : -1) * .28, 0, assemble)
       );
       const emphasis = index % 6 === 0 ? 1 + populate * .18 : 1;
       cell.scale.set(mix(.32, .7, assemble) * emphasis, mix(.32, .08, flatten), mix(.32, .52, assemble) * emphasis);
@@ -334,7 +355,7 @@ function createManagementScene({ root, camera, geometry, lineMaterial, addMesh, 
     labels[3].userData.textSurface.opacity = smooth(.7, .84, progress);
     root.rotation.x = mix(-.08, -.57, flatten);
     root.rotation.y = mix(-.68, -.02, assemble);
-    camera.position.set(mix(3.4, .2, flatten), mix(4.1, 3.4, flatten), mix(8.5, 4, assemble));
+    camera.position.set(mix(4.2, .15, flatten), mix(4.5, 3.2, flatten), mix(9.5, 3.8, assemble));
     camera.lookAt(0, mix(.35, 0, flatten), 0);
     faceCamera(...labels);
   }
@@ -358,10 +379,10 @@ function createInstitutionScene({ root, camera, geometry, lineMaterial, addMesh,
   continuityRing.rotation.x = Math.PI / 2;
   continuityRing.position.y = -.14;
   const origins = [
-    new THREE.Vector3(-3.4, 1.4, 1.8),
-    new THREE.Vector3(3.2, -.8, 2.4),
-    new THREE.Vector3(-2.7, -1.4, -2.5),
-    new THREE.Vector3(3.6, 1.1, -1.8)
+    new THREE.Vector3(-4.2, 1.8, 2.5),
+    new THREE.Vector3(4.0, -1.2, 3.0),
+    new THREE.Vector3(-3.4, -1.8, -3.2),
+    new THREE.Vector3(4.4, 1.5, -2.4)
   ];
   const targets = [
     new THREE.Vector3(-1.35, 0, .9),
@@ -383,15 +404,15 @@ function createInstitutionScene({ root, camera, geometry, lineMaterial, addMesh,
 
   function update(progress) {
     currentStage = Math.min(4, Math.floor(progress * 4) + 1);
-    const recognize = smooth(.1, .36, progress);
-    const coordinate = smooth(.3, .72, progress);
-    const continuity = smooth(.7, 1, progress);
+    const recognize = smooth(.05, .3, progress);
+    const coordinate = smooth(.22, .65, progress);
+    const continuity = smooth(.58, 1, progress);
     modules.forEach((module, index) => {
       module.position.lerpVectors(origins[index], targets[index], coordinate);
       module.rotation.set(
-        mix((index - 1.5) * .22, 0, coordinate),
-        mix((index % 2 ? 1 : -1) * .58, 0, coordinate),
-        mix((index % 2 ? 1 : -1) * .16, 0, coordinate)
+        mix((index - 1.5) * .35, 0, coordinate),
+        mix((index % 2 ? 1 : -1) * .72, 0, coordinate),
+        mix((index % 2 ? 1 : -1) * .24, 0, coordinate)
       );
       module.scale.set(mix(.62, 1.05, recognize), mix(.72, .2, continuity), mix(.62, .7, coordinate));
       const label = moduleLabels[index];
@@ -417,7 +438,7 @@ function createInstitutionScene({ root, camera, geometry, lineMaterial, addMesh,
     continuityLabel.userData.textSurface.opacity = smooth(.76, .9, progress);
     root.rotation.x = mix(-.04, -.43, continuity);
     root.rotation.y = mix(.35, -.1, coordinate);
-    camera.position.set(mix(3.2, .2, coordinate), mix(3.5, 3.3, continuity), mix(9.4, 4, coordinate));
+    camera.position.set(mix(4.0, .15, coordinate), mix(4.0, 3.0, continuity), mix(11, 4.2, coordinate));
     camera.lookAt(0, mix(.35, 0, continuity), 0);
     faceCamera(...moduleLabels, coreLabel, continuityLabel);
   }
@@ -426,8 +447,8 @@ function createInstitutionScene({ root, camera, geometry, lineMaterial, addMesh,
 }
 
 function createProfessionalScene({ root, camera, geometry, material, lineMaterial, addMesh, createTextPlane, faceCamera, surfaces }) {
-  const pointShape = geometry(new THREE.SphereGeometry(1, 12, 8));
-  const markerShape = geometry(new THREE.SphereGeometry(1, 20, 14));
+  const pointShape = geometry(new THREE.SphereGeometry(1, 16, 12));
+  const markerShape = geometry(new THREE.SphereGeometry(1, 24, 16));
   const gateShape = geometry(new THREE.TorusGeometry(.78, .025, 8, 44));
   const possibilities = [];
   const pointSurfaces = [];
@@ -488,11 +509,11 @@ function createProfessionalScene({ root, camera, geometry, material, lineMateria
     });
     const current = curve.getPoint(progress);
     marker.position.copy(current);
-    marker.scale.setScalar(mix(.12, .2, arrive));
+    marker.scale.setScalar(mix(.12, .24, arrive));
     gates.forEach((gate, index) => {
       const gateProgress = .26 + index * .22;
       const emphasis = 1 - Math.min(1, Math.abs(progress - gateProgress) * 5);
-      gate.scale.setScalar(1 + emphasis * .22);
+      gate.scale.setScalar(1 + emphasis * .32);
       gate.rotation.z = mix((index - 1) * .22, 0, contextualize);
       const label = labels[index];
       label.position.set(gate.position.x, gate.position.y + 1.02, gate.position.z);
@@ -500,7 +521,7 @@ function createProfessionalScene({ root, camera, geometry, material, lineMateria
       label.userData.textSurface.opacity = smooth(center - .12, center - .03, progress) * (1 - smooth(center + .14, center + .24, progress));
     });
     presence.visible = progress > .7;
-    presence.scale.setScalar(Math.max(.001, arrive));
+    presence.scale.set(Math.max(.001, arrive * 1.2), Math.max(.001, arrive), Math.max(.001, arrive * 1.2));
     arrivalRing.scale.setScalar(Math.max(.001, arrive));
     arrivalRing.rotation.z = mix(-.8, 0, arrive);
     labels[3].position.set(0, 1.1, -3.05);
@@ -510,9 +531,9 @@ function createProfessionalScene({ root, camera, geometry, material, lineMateria
     const currentCamera = curve.getPoint(clamp(progress * .82));
     const ahead = curve.getPoint(clamp(progress * .82 + .16));
     camera.position.set(
-      currentCamera.x + mix(compactLayout ? 2.6 : 3.5, compactLayout ? 1.25 : 1.65, arrive),
-      currentCamera.y + mix(compactLayout ? 2.3 : 2.05, 1.45, contextualize),
-      currentCamera.z + mix(compactLayout ? 5.3 : 5.8, compactLayout ? 4.7 : 5, arrive)
+      currentCamera.x + mix(compactLayout ? 2.4 : 3.2, compactLayout ? 1.0 : 1.3, arrive),
+      currentCamera.y + mix(compactLayout ? 2.1 : 1.9, 1.2, contextualize),
+      currentCamera.z + mix(compactLayout ? 5.0 : 5.5, compactLayout ? 4.2 : 4.5, arrive)
     );
     camera.lookAt(ahead.x, ahead.y, ahead.z);
     faceCamera(...labels);

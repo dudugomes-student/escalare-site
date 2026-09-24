@@ -55,6 +55,7 @@ function setInternalSceneProgress(host, progress) {
 function initSteppedHero(selector, datasetKey, states) {
   const scene = document.querySelector(selector);
   if (!scene) return;
+  const story = scene.closest('.hero-split') || scene;
   const renderHost = scene.querySelector('[data-internal-scene]');
   const setFinal = () => {
     scene.dataset[datasetKey] = states.at(-1);
@@ -66,12 +67,31 @@ function initSteppedHero(selector, datasetKey, states) {
   } else {
     scene.dataset[datasetKey] = states[0];
   }
+
+  let start = 0;
+  let travel = 1;
+  const measure = () => {
+    scene.classList.add('is-measuring');
+    const headerHeight = document.querySelector('.site-header')?.offsetHeight || 80;
+    const sceneTop = scrollY + scene.getBoundingClientRect().top;
+    const storyBottom = scrollY + story.getBoundingClientRect().bottom;
+    start = innerWidth <= 700
+      ? Math.max(0, sceneTop - innerHeight * .68)
+      : Math.max(0, sceneTop - headerHeight - 24);
+    travel = Math.max(innerHeight * .72, storyBottom - scene.offsetHeight - start);
+    scene.classList.remove('is-measuring');
+  };
+  measure();
+  addEventListener('resize', measure, { passive: true });
+  document.fonts?.ready.then(measure);
+  cleanups.push(() => removeEventListener('resize', measure));
+
   onFrameScroll(() => {
     if (reducedMotion.matches) {
       setFinal();
       return;
     }
-    const progress = sceneProgress(scene);
+    const progress = clamp((scrollY - start) / travel);
     const index = Math.min(states.length - 1, Math.floor(progress * states.length));
     scene.dataset[datasetKey] = states[index];
     scene.style.setProperty('--scene-progress', String(progress));
@@ -128,8 +148,8 @@ function initCoordinationStory() {
     const pinTravel = Math.max(0, end - start);
     const pinOffset = innerWidth <= 900 ? clamp(scrollY - start, 0, pinTravel) : 0;
     scene.style.setProperty('--coordination-pin-offset', `${pinOffset}px`);
-    const travel = Math.max(end - start, innerHeight * .82);
-    setProgress((scrollY - start) / travel);
+    const travel = Math.max(end - start, innerHeight * 2.2);
+    setProgress(Math.max(0, scrollY - start) / travel);
   });
 }
 
@@ -276,6 +296,18 @@ function createWebGL2Surface(compatibilityOnly = false) {
         failIfMajorPerformanceCaveat: true
       });
       if (context) return { canvas, context, compatibility: false };
+    } catch {
+      // A second full-quality request without the caveat veto is attempted below.
+    }
+    const retryCanvas = makeCanvas();
+    try {
+      const context = retryCanvas.getContext('webgl2', {
+        alpha: true,
+        antialias: true,
+        powerPreference: 'high-performance',
+        failIfMajorPerformanceCaveat: false
+      });
+      if (context) return { canvas: retryCanvas, context, compatibility: false };
     } catch {
       // The compatible WebGL2 configuration below is the next capability step.
     }

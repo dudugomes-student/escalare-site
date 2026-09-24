@@ -8,7 +8,7 @@ Se necessário, iniciar com `node tools/preview.cjs`. Não abrir por file://, po
 
 Arquitetura estática multipage, marca existente, css/style.css, bibliotecas locais e licenças, fundação Three.js/GSAP, fallback SVG, carregamento progressivo, renderização sob demanda, descarte e preferência por movimento reduzido. As imagens anteriores permanecem no repositório, mas não são usadas como documentação de uma equipe real.
 
-O texto da Política de Privacidade foi mantido; sua apresentação e navegação foram atualizadas. As alterações locais que precediam esta execução não foram revertidas. Nenhum commit, push, merge ou deploy foi realizado.
+A Política de Privacidade foi reconciliada com a arquitetura estática real: formulário local, encaminhamento voluntário ao WhatsApp, ausência de analytics/cookies próprios e participação técnica da hospedagem e do Google Fonts. As alterações locais que precediam esta execução não foram revertidas. Nenhum commit, push, merge ou deploy foi realizado.
 
 ## O que foi refinado
 
@@ -40,7 +40,7 @@ Experiência inicial seguida de ponte gráfica, contexto operacional, processo, 
 
 ## Three.js
 
-Mantém a arquitetura procedural e uma única superfície WebGL na cena principal. A experiência completa é o padrão em desktop, tablet e mobile, com pixel ratio limitado a 1,6 e sombras preservadas. Apenas falha real tenta o modo de compatibilidade, com pixel ratio 1 e sem sombras; o fallback semântico entra se essa tentativa também falhar ou se a preferência de movimento reduzido exigir a composição estática. Corredores permanecem na transformação e os detalhes das salas viram marcas da escala.
+Mantém a arquitetura procedural e uma única superfície WebGL na cena principal. A experiência completa é o padrão em desktop, tablet e mobile. O DPR varia entre 1 e 2,25 dentro de um orçamento de 7,5 milhões de pixels físicos por canvas; o modo compatível usa 1 a 1,25 e orçamento de 3 milhões. O cálculo é refeito em resize/orientação. A recusa isolada de `failIfMajorPerformanceCaveat` não reduz mais a qualidade antes de uma tentativa completa real. Apenas falha de contexto/renderização ou lentidão sustentada medida tenta o modo compatível; o fallback semântico entra se a tentativa compatível também falhar ou se a preferência de movimento reduzido exigir a composição estática.
 
 ## GSAP / ScrollTrigger
 
@@ -92,7 +92,7 @@ Medições locais não equivalem a dados de campo. Relatório mais recente: outp
 
 Skip link, landmarks, H1 único, labels, foco visível, menu com foco contido e fundo inert, FAQ nativo, estados aria-pressed e mensagens de status. Conteúdo principal acessível sem canvas e navegação disponível sem JavaScript.
 
-Auditoria axe-core WCAG 2 A/AA e 2.1 AA sem violações detectadas. Há verificações de contraste incompletas sobre fundos gráficos/SVG, que não equivalem a aprovação automática; a avaliação visual complementou a auditoria. Não foi feita certificação de acessibilidade nem teste completo com leitor de tela.
+Uma execução anterior da auditoria axe-core WCAG 2 A/AA e 2.1 AA registrou zero violações. Nesta rodada final o arquivo local do `axe-core` não estava disponível, portanto a auditoria automatizada atual é registrada como **não executada**, e não como aprovada. As verificações funcionais atuais cobrem teclado, foco, menu, landmarks, headings, labels, reduced motion, fallback e ausência de JavaScript. Não foi feita certificação de acessibilidade nem teste completo com leitor de tela.
 
 ## SEO
 
@@ -102,7 +102,7 @@ Titles/descriptions individuais, canonical e Open Graph, imagem social própria,
 
 - tools/verify-experience.cjs: cinco estados e reversão, resize, pausas, perda/ausência de contexto, falha de biblioteca, preferência reduzida dinâmica, menu e páginas internas.
 - tools/review-site.cjs: nove páginas, links e âncoras locais, 360–1920 px, H1, canonical/JSON-LD, formulário sem envio, foco, Escape, histórico, 404 e navegação sem JS.
-- tools/audit-accessibility.cjs: nove páginas e menu mobile.
+- tools/audit-accessibility.cjs: **não executado nesta rodada final**, porque o arquivo local do `axe-core` não estava disponível; a execução histórica anterior permanece apenas como referência.
 - tools/verify-resilience.cjs: mudanças de qualidade, portrait/landscape, visibilidade simulada, histórico, memória/economia de dados, diagrama e reduced motion.
 - tools/measure-experience.cjs: LCP, CLS, tarefas longas e diagnóstico gráfico local.
 - Sintaxe JavaScript, git diff --check e revisão visual de capturas em output/poc-review/.
@@ -113,14 +113,15 @@ O evento de documento oculto foi simulado para testar a lógica; não equivale a
 
 Clientes, hospitais atendidos, equipe/fundadores, história/datas, resultados, percentuais, certificações, SLA, operação 24/7, banco de substitutos, auditoria de CRM/RQE, repasses, plataforma própria, indicadores próprios, cobertura geográfica e vagas.
 
-Conteúdos tem estado editorial honesto, sem artigos fictícios. Não foram criadas ofertas de Auditoria, Indicadores, Recrutamento ou Tecnologia Proprietária.
+Conteúdos tem estado editorial honesto, sem artigos fictícios. Como ainda não há publicação real, o link foi retirado temporariamente da navegação principal e do footer; a página e sua URL continuam disponíveis. Não foram criadas ofertas de Auditoria, Indicadores, Recrutamento ou Tecnologia Proprietária.
 
 ## Limitações restantes
 
 - Testes realizados em Edge/Chromium headless, não em Safari/Firefox ou aparelhos físicos.
 - Fontes externas continuam sendo servidas pelo Google Fonts, com fallback de sistema.
 - Formulário encaminha para WhatsApp; não há backend, CRM, upload de documentos ou banco de talentos.
-- A política jurídica preservada menciona práticas de cookies e tratamento que precisam ser reconciliadas com os fluxos efetivamente adotados antes da publicação.
+- GitHub Pages não permite configurar headers HTTP arbitrários pelo repositório; a limitação e a baseline para um host/proxy com controle de headers estão em `SECURITY.md`.
+- A política de privacidade agora corresponde ao comportamento técnico observado, mas ainda precisa de revisão jurídica antes da publicação.
 - Conteúdo editorial ainda não tem artigos reais.
 - Arquivos de marca vetoriais oficiais e fotografia institucional real não estão disponíveis.
 - Header e footer são HTML estático repetido; mudanças futuras devem ser replicadas nas nove páginas e verificadas pelo QA.
@@ -128,7 +129,7 @@ Conteúdos tem estado editorial honesto, sem artigos fictícios. Não foram cria
 ## Itens que precisam da decisão do responsável
 
 1. Avaliação visual local.
-2. Confirmar domínio/canonical de publicação e contato definitivo. Foi usado o e-mail existente no histórico e na política.
+2. Confirmar se telefone, WhatsApp e e-mail existentes continuam sendo os canais definitivos.
 3. Revisar a política jurídica antes de publicar.
 4. Fornecer conteúdo real para artigos, história, pessoas ou serviços adicionais.
 5. Autorizar separadamente qualquer commit, push ou deploy.
