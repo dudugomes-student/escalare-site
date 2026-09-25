@@ -1,0 +1,8 @@
+# GitHub Pages builds this static site with Jekyll from the repository root.
+# Keep development notes, QA tools and local artifacts out of the public site.
+exclude:
+  - "*.md"
+  - "**/*.md"
+  - tools
+  - output
+  - "*.log"

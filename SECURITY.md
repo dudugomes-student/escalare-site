@@ -6,6 +6,12 @@ O site é composto por HTML, CSS e JavaScript estáticos. Não há backend, aute
 
 As dependências de produção estão versionadas localmente em `js/vendor/`. As únicas origens externas carregadas pelas páginas são Google Fonts; WhatsApp, telefone e e-mail são destinos acionados por links.
 
+## Separação entre repositório e site público
+
+O GitHub Pages continua usando a raiz do repositório como fonte Jekyll. O arquivo `_config.yml` exclui Markdown, `tools/`, `output/` e logs do artifact gerado. Assim, `AVALIACAO.md`, `SECURITY.md`, documentação de dependências e scripts de QA permanecem no repositório sem serem publicados como páginas ou arquivos públicos.
+
+Essa correção só aparece no endereço público depois de um novo build autorizado do GitHub Pages. Até esse build, o artifact anterior pode continuar acessível; não foi feito deploy durante a implementação.
+
 ## Limite do deploy atual
 
 O repositório está preparado para GitHub Pages. Nesse serviço, o projeto não controla headers HTTP de resposta arbitrários. Arquivos como `_headers` ou `.htaccess` não configuram CSP, `X-Content-Type-Options`, `Permissions-Policy` ou proteção de framing. A limitação é registrada pela própria comunidade do GitHub: <https://github.com/orgs/community/discussions/54257>.

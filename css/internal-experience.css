@@ -318,7 +318,7 @@
 .composition-steps li {
   min-height: clamp(260px, 42vh, 430px);
   align-content: center;
-  opacity: .42;
+  opacity: .92;
 }
 
 .composition-steps li.is-current {
@@ -620,7 +620,7 @@
 .route-label:nth-of-type(3) { top: 66%; }
 .route-label:nth-of-type(4) { top: 91%; }
 
-.professional-copy .ruled-list li { min-height: 210px; align-content: center; opacity: .48; }
+.professional-copy .ruled-list li { min-height: 210px; align-content: center; opacity: .92; }
 .professional-copy .ruled-list li.is-current { opacity: 1; border-color: var(--ix-green); }
 
 /* Sobre: editorial method, not another operational diagram. */

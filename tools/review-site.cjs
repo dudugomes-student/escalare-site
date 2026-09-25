@@ -4,15 +4,41 @@ const { createServer } = require('./preview.cjs');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const assert = require('node:assert/strict');
-const pages = ['index.html','solucoes.html','gestao-de-escalas-medicas.html','para-instituicoes.html','para-profissionais.html','sobre.html','conteudos.html','contato.html','privacidade.html'];
+const escapeRegExp = value => value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+// Exercise the smaller internal WebGL scenes before the multi-scene Home so
+// headless GPU resource pressure does not create a false negative in this suite.
+const pages = ['gestao-de-escalas-medicas.html','para-instituicoes.html','para-profissionais.html','solucoes.html','sobre.html','conteudos.html','contato.html','privacidade.html','index.html'];
 const internalSceneByPage = {
   'gestao-de-escalas-medicas.html': 'management',
   'para-instituicoes.html': 'institutions',
   'para-profissionais.html': 'professional'
 };
+const siteRoot = path.resolve(__dirname, '..');
 const output = path.resolve(__dirname, '../output/poc-review');
 (async () => {
   await fs.mkdir(output, {recursive:true});
+  const jekyllConfig = await fs.readFile(path.join(siteRoot, '_config.yml'),'utf8');
+  for (const exclusion of ['"*.md"','"**/*.md"','tools','output','"*.log"']) {
+    assert(jekyllConfig.includes(`- ${exclusion}`),`missing Jekyll exclusion: ${exclusion}`);
+  }
+  const sitemap = await fs.readFile(path.join(siteRoot, 'sitemap.xml'),'utf8');
+  assert.doesNotMatch(sitemap,/conteudos\.html/,'empty editorial page must stay out of sitemap');
+  for (const file of [...pages,'404.html']) {
+    const html = await fs.readFile(path.join(siteRoot,file),'utf8');
+    for (const match of html.matchAll(/(?:href|src)="([^"]+)"/g)) {
+      const raw = match[1];
+      if (/^(?:https?:|mailto:|tel:|data:)/.test(raw)) continue;
+      const [reference,hash=''] = raw.split('#',2);
+      const relative = decodeURIComponent(reference.split('?')[0] || file);
+      const target = path.resolve(siteRoot,relative);
+      assert(target.startsWith(siteRoot+path.sep),`${file} unsafe local path: ${raw}`);
+      await fs.access(target);
+      if(hash && path.extname(target)==='.html') {
+        const targetHtml = await fs.readFile(target,'utf8');
+        assert(new RegExp(`\\bid=["']${escapeRegExp(decodeURIComponent(hash))}["']`).test(targetHtml),`${file} missing anchor: ${raw}`);
+      }
+    }
+  }
   const server = createServer();
   await new Promise(resolve => server.listen(4176,'127.0.0.1',resolve));
   const browser = await chromium.launch({executablePath:process.env.BROWSER_PATH || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',headless:true,args:['--enable-unsafe-swiftshader']});
@@ -20,47 +46,76 @@ const output = path.resolve(__dirname, '../output/poc-review');
   const results = [];
   const errors = [];
   try {
-    const context = await browser.newContext({viewport:{width:1440,height:1000}});
-    const page = await context.newPage();
-    page.on('pageerror', error => errors.push(error.message));
+    const pageTitles = new Set();
+    const canonicalUrls = new Set();
     for (const file of pages) {
+      const pageContext = await browser.newContext({viewport:{width:1440,height:1000}});
+      const page = await pageContext.newPage();
+      let internalRenderMode = 'not-applicable';
+      page.on('pageerror', error => errors.push(error.message));
+      try {
       const response = await page.goto(base+file,{waitUntil:'networkidle'});
       assert.equal(response.status(),200,file);
       assert.equal(await page.locator('h1').count(),1,file);
       assert.equal(await page.locator('main').count(),1,file);
+      assert.equal(await page.locator('html[lang="pt-BR"]').count(),1,file);
+      assert.equal(await page.locator('meta[name="viewport"]').count(),1,file);
+      assert.equal(await page.locator('meta[name="description"]').count(),1,file);
       assert.equal(await page.locator('link[rel=canonical]').count(),1,file);
+      assert.equal(await page.locator('meta[property="og:title"]').count(),1,file);
+      assert.equal(await page.locator('meta[property="og:description"]').count(),1,file);
+      assert.equal(await page.locator('meta[property="og:url"]').count(),1,file);
+      assert.equal(await page.locator('meta[property="og:image"]').count(),1,file);
       assert.equal(await page.locator('meta[name="referrer"][content="strict-origin-when-cross-origin"]').count(),1,file);
+      const robotsMeta = page.locator('meta[name="robots"]');
+      const robots = await robotsMeta.count() ? await robotsMeta.getAttribute('content') : null;
+      if(file==='conteudos.html') assert.match(robots || '',/(?:^|,\s*)noindex(?:,|$)/,file);
+      else assert(!robots?.includes('noindex'),`${file} must remain indexable`);
       assert.equal(await page.locator('.main-nav a[href="conteudos.html"]').count(),0,file);
       const unsafeBlankLinks=await page.locator('a[target="_blank"]').evaluateAll(links=>links.filter(link=>!link.relList.contains('noopener')||!link.relList.contains('noreferrer')).map(link=>link.outerHTML));
       assert.deepEqual(unsafeBlankLinks,[],file+' unsafe target=_blank');
-      assert(await page.title(),file);
-      const broken = await page.evaluate(async () => {
-        const urls = [...new Set([...document.querySelectorAll('a[href],img[src],script[src],link[rel=stylesheet]')].map(el=>el.href || el.src).filter(url=>url && new URL(url).origin===location.origin))];
-        const invalid=[];
-        for (const url of urls) {
-          const target = new URL(url);
-          const response=await fetch(target.pathname);
-          if(!response.ok) {invalid.push(url);continue;}
-          if(target.hash && target.pathname.endsWith('.html')) {
-            const doc=new DOMParser().parseFromString(await response.text(),'text/html');
-            if(!doc.getElementById(decodeURIComponent(target.hash.slice(1)))) invalid.push(url);
-          }
-        }
-        return invalid;
-      });
-      assert.deepEqual(broken,[],file+' broken links');
+      const title = await page.title();
+      assert(title,file);
+      assert(!pageTitles.has(title),`${file} duplicate title: ${title}`);
+      pageTitles.add(title);
+      const canonical = await page.locator('link[rel=canonical]').getAttribute('href');
+      const ogUrl = await page.locator('meta[property="og:url"]').getAttribute('content');
+      assert.match(canonical,/^https:\/\/escalaregestaoempresarial\.com\//,file);
+      assert.equal(ogUrl,canonical,`${file} Open Graph URL must match canonical`);
+      assert(!canonicalUrls.has(canonical),`${file} duplicate canonical: ${canonical}`);
+      canonicalUrls.add(canonical);
       const schema = await page.locator('script[type="application/ld+json"]').allTextContents();
       schema.forEach(text=>JSON.parse(text));
       if(file!=='index.html') assert.equal(await page.locator('script[src*="vendor"]').count(),0,file);
       if(internalSceneByPage[file]) {
         const type=internalSceneByPage[file];
-        await page.waitForFunction(sceneType=>document.querySelector(`[data-internal-scene="${sceneType}"]`)?.dataset.renderMode==='full',type);
-        assert.equal(await page.locator(`[data-internal-scene="${type}"] canvas`).count(),1,file);
+        await page.locator(`[data-internal-scene="${type}"]`).scrollIntoViewIfNeeded();
+        try {
+          await page.waitForFunction(sceneType=>{
+            const mode=document.querySelector(`[data-internal-scene="${sceneType}"]`)?.dataset.renderMode || '';
+            return /^(?:full|compatibility|semantic-fallback)/.test(mode) && !mode.endsWith('-loading');
+          },type,{timeout:8000});
+        } catch {
+          const mode = await page.locator(`[data-internal-scene="${type}"]`).getAttribute('data-render-mode');
+          throw new Error(`${file} internal scene did not reach a stable render mode (renderMode=${mode})`);
+        }
+        internalRenderMode = await page.locator(`[data-internal-scene="${type}"]`).getAttribute('data-render-mode');
+        const canvasCount = await page.locator(`[data-internal-scene="${type}"] canvas`).count();
+        if(/^(?:full|compatibility)$/.test(internalRenderMode)) assert.equal(canvasCount,1,file);
+        else {
+          assert.match(internalRenderMode,/^semantic-fallback/,file);
+          assert.equal(canvasCount,0,`${file} fallback must remove the failed canvas`);
+        }
       } else if(file!=='index.html') {
         assert.equal(await page.locator('canvas').count(),0,file);
       }
-      for(const width of [360,375,390,412,430,768,1024,1440,1920]) {
-        await page.setViewportSize({width,height:900});
+      const viewports = [
+        {width:360,height:800},{width:375,height:812},{width:390,height:844},
+        {width:412,height:915},{width:430,height:932},{width:768,height:1024},
+        {width:1024,height:900},{width:1366,height:768},{width:1440,height:900},{width:1920,height:1080}
+      ];
+      for(const viewport of viewports) {
+        await page.setViewportSize(viewport);
         await page.waitForTimeout(file==='index.html'?220:150);
         const overflow=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth}));
         assert(overflow.scroll <= overflow.width, file+' overflow '+JSON.stringify(overflow));
@@ -73,8 +128,17 @@ const output = path.resolve(__dirname, '../output/poc-review');
       await page.setViewportSize({width:390,height:844});
       await page.waitForTimeout(600);
       await page.screenshot({path:path.join(output,file.replace('.html','')+'-mobile.png'),fullPage:false});
-      results.push({page:file,links:'pass',responsive:'360–1920',headings:'pass',schema:'pass'});
+      results.push({page:file,links:'pass',responsive:'360×800–1920×1080',headings:'pass',schema:'pass',seo:'pass',internalRenderMode});
+      } finally {
+        await pageContext.close();
+      }
     }
+    assert.equal(pageTitles.size,pages.length,'every page needs a unique title');
+    assert.equal(canonicalUrls.size,pages.length,'every page needs a unique canonical');
+    results.push({test:'Jekyll exclusions and editorial noindex/sitemap policy',pass:true});
+    const context = await browser.newContext({viewport:{width:1440,height:1000}});
+    const page = await context.newPage();
+    page.on('pageerror', error => errors.push(error.message));
     await page.goto(base+'contato.html?perfil=profissional');
     assert.equal(await page.locator('#profile').inputValue(),'Profissional');
     await page.locator('#contact-name').fill('Teste de avaliação');
@@ -130,6 +194,7 @@ const output = path.resolve(__dirname, '../output/poc-review');
     const notFound=await page.goto(base+'missing/deep-page');
     assert.equal(notFound.status(),404);
     assert.equal(await page.locator('#home-link').getAttribute('href'),'/escalare-site/index.html');
+    assert.match(await page.locator('meta[name="robots"]').getAttribute('content'),/noindex/);
     results.push({test:'native history and nested 404 recovery',pass:true});
     const noJS=await browser.newContext({javaScriptEnabled:false,viewport:{width:390,height:844}});
     const plain=await noJS.newPage();

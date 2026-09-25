@@ -524,7 +524,7 @@ function createProfessionalScene({ root, camera, geometry, material, lineMateria
     presence.scale.set(Math.max(.001, arrive * 1.2), Math.max(.001, arrive), Math.max(.001, arrive * 1.2));
     arrivalRing.scale.setScalar(Math.max(.001, arrive));
     arrivalRing.rotation.z = mix(-.8, 0, arrive);
-    labels[3].position.set(0, 1.1, -3.05);
+    labels[3].position.set(0, compactLayout ? .55 : 1.1, -3.05);
     labels[3].userData.textSurface.opacity = smooth(.7, .86, progress);
     pathSurface.opacity = mix(.25, .82, select);
     root.rotation.y = mix(-.18, .06, contextualize);

@@ -86,23 +86,23 @@ Sem câmera animada ou sequência longa. Narrativa semântica permanece disponí
 
 Renderização sob demanda, pausa fora da viewport e em documento oculto, recuperação progressiva baseada em falha real, geometrias compartilhadas e descarte. Dependências da experiência: aproximadamente 227 KB em estimativa gzip, carregadas somente quando elegíveis.
 
-Medições locais não equivalem a dados de campo. Relatório mais recente: output/poc-review/performance.json. A inicialização WebGL ainda pode gerar uma tarefa longa em algumas máquinas; não foi alegado resultado Lighthouse ou INP de campo.
+Medições locais não equivalem a dados de campo. No Edge headless sem throttling, a rodada de 24/09/2026 registrou LCP de 776 ms e CLS de 0,001 em 1366×768; em 390×844, LCP de 404 ms e CLS de 0,018. A inicialização WebGL ainda gerou tarefas longas de até 274 ms no desktop e 199 ms no mobile. Relatório: output/poc-review/performance.json. Não foi alegado resultado Lighthouse, INP ou dado de campo.
 
 ## Acessibilidade
 
 Skip link, landmarks, H1 único, labels, foco visível, menu com foco contido e fundo inert, FAQ nativo, estados aria-pressed e mensagens de status. Conteúdo principal acessível sem canvas e navegação disponível sem JavaScript.
 
-Uma execução anterior da auditoria axe-core WCAG 2 A/AA e 2.1 AA registrou zero violações. Nesta rodada final o arquivo local do `axe-core` não estava disponível, portanto a auditoria automatizada atual é registrada como **não executada**, e não como aprovada. As verificações funcionais atuais cobrem teclado, foco, menu, landmarks, headings, labels, reduced motion, fallback e ausência de JavaScript. Não foi feita certificação de acessibilidade nem teste completo com leitor de tela.
+A auditoria axe-core atual, executada em 24/09/2026 com WCAG 2 A/AA e 2.1 AA, registrou zero violações nas nove páginas e no menu mobile depois da correção de contraste dos estados inativos de Gestão e Profissionais. Permaneceram verificações de contraste classificadas pelo axe como `incomplete` em composições complexas; elas não foram convertidas em aprovação automática. As verificações funcionais cobrem teclado, foco, menu, landmarks, headings, labels, reduced motion, fallback e ausência de JavaScript. Não foi feita certificação de acessibilidade nem teste completo com leitor de tela.
 
 ## SEO
 
-Titles/descriptions individuais, canonical e Open Graph, imagem social própria, Organization JSON-LD, breadcrumbs visíveis, sitemap e robots. Sem métricas, avaliações ou schemas de vagas inventados. URLs e domínio seguem o canonical já existente no projeto. Assets e navegação utilizam caminhos relativos.
+Titles/descriptions individuais, canonical e Open Graph, imagem social própria, Organization JSON-LD, breadcrumbs visíveis, sitemap e robots. O título de Gestão foi diferenciado da Home. Conteúdos usa `noindex, follow` e saiu temporariamente do sitemap enquanto não possui artigos reais. Sem métricas, avaliações ou schemas de vagas inventados. URLs e domínio permanecem em `https://escalaregestaoempresarial.com/`.
 
 ## Testes realizados
 
 - tools/verify-experience.cjs: cinco estados e reversão, resize, pausas, perda/ausência de contexto, falha de biblioteca, preferência reduzida dinâmica, menu e páginas internas.
-- tools/review-site.cjs: nove páginas, links e âncoras locais, 360–1920 px, H1, canonical/JSON-LD, formulário sem envio, foco, Escape, histórico, 404 e navegação sem JS.
-- tools/audit-accessibility.cjs: **não executado nesta rodada final**, porque o arquivo local do `axe-core` não estava disponível; a execução histórica anterior permanece apenas como referência.
+- tools/review-site.cjs: nove páginas, links e âncoras locais, matriz de 360×800 a 1920×1080, H1, SEO, exclusões Jekyll, formulário sem envio, foco, Escape, histórico, 404 e navegação sem JS.
+- tools/audit-accessibility.cjs: executado com axe-core 4.10.3; zero violações nas nove páginas e no menu mobile, com itens de contraste `incomplete` registrados para revisão humana.
 - tools/verify-resilience.cjs: mudanças de qualidade, portrait/landscape, visibilidade simulada, histórico, memória/economia de dados, diagrama e reduced motion.
 - tools/measure-experience.cjs: LCP, CLS, tarefas longas e diagnóstico gráfico local.
 - Sintaxe JavaScript, git diff --check e revisão visual de capturas em output/poc-review/.
@@ -113,11 +113,16 @@ O evento de documento oculto foi simulado para testar a lógica; não equivale a
 
 Clientes, hospitais atendidos, equipe/fundadores, história/datas, resultados, percentuais, certificações, SLA, operação 24/7, banco de substitutos, auditoria de CRM/RQE, repasses, plataforma própria, indicadores próprios, cobertura geográfica e vagas.
 
-Conteúdos tem estado editorial honesto, sem artigos fictícios. Como ainda não há publicação real, o link foi retirado temporariamente da navegação principal e do footer; a página e sua URL continuam disponíveis. Não foram criadas ofertas de Auditoria, Indicadores, Recrutamento ou Tecnologia Proprietária.
+Conteúdos tem estado editorial honesto, sem artigos fictícios. Como ainda não há publicação real, o link permanece fora da navegação principal e do footer, a página usa `noindex, follow` e sua URL foi removida do sitemap. A página continua acessível diretamente. Não foram criadas ofertas de Auditoria, Indicadores, Recrutamento ou Tecnologia Proprietária.
+
+## Separação do artifact de produção
+
+`_config.yml` exclui `*.md`, Markdown aninhado, `tools/`, `output/` e logs do build Jekyll do GitHub Pages. As ferramentas e a documentação continuam versionadas, mas não devem integrar o próximo artifact público. Ruby/Jekyll não estavam instalados para gerar `_site` localmente; a configuração foi conferida contra a documentação do Jekyll e pela suíte estática. O artifact público atual só deixará de expor os arquivos internos após um novo build autorizado do Pages.
 
 ## Limitações restantes
 
 - Testes realizados em Edge/Chromium headless, não em Safari/Firefox ou aparelhos físicos.
+- O artifact Jekyll não foi gerado localmente porque Ruby/Jekyll não estavam disponíveis; as respostas públicas 404 para arquivos internos dependem do próximo build autorizado.
 - Fontes externas continuam sendo servidas pelo Google Fonts, com fallback de sistema.
 - Formulário encaminha para WhatsApp; não há backend, CRM, upload de documentos ou banco de talentos.
 - GitHub Pages não permite configurar headers HTTP arbitrários pelo repositório; a limitação e a baseline para um host/proxy com controle de headers estão em `SECURITY.md`.

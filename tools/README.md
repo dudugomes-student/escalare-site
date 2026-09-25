@@ -12,6 +12,10 @@ node tools/preview.cjs
 
 Abra `http://127.0.0.1:4173/escalare-site/`. O prefixo reproduz os caminhos do GitHub Pages. Não abra o HTML diretamente por `file://`, pois a experiência usa módulos JavaScript.
 
+## Artifact do GitHub Pages
+
+O Pages processa a raiz com Jekyll. `_config.yml` mantém Markdown, `tools/`, `output/` e logs fora do artifact público, sem remover esses recursos do repositório. `review-site.cjs` verifica a presença dessas exclusões, o `noindex` temporário de Conteúdos e sua ausência no sitemap. A confirmação das respostas 404 no endereço público depende do próximo build autorizado; a suíte local não simula um deploy.
+
 ## Testes
 
 Os scripts usam `playwright-core` e um navegador Edge local. O pacote pode estar instalado fora do projeto: defina `PLAYWRIGHT_PATH` com o caminho absoluto da pasta do pacote. Opcionalmente, `BROWSER_PATH` permite escolher outro executável Chromium.
